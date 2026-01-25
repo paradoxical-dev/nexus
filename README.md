@@ -32,6 +32,11 @@ git clone --depth 1 https://github.com/doomemacs/doomemacs ~/.config/emacs
 
 It is also assumed that you have base level knowledge of how to use and configure Doom.
 
+Some other package dependencies are as follows:
+
+- [eza](https://github.com/eza-community/eza) (for divish previews)
+- [mu](https://github.com/djcb/mu.git) (for mu4e)
+
 # Installation
 
 TODO
