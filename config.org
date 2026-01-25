@@ -625,6 +625,7 @@ Then we can configure it within [[file:config.el][config.el]]
 
 #+begin_src emacs-lisp
 (use-package! dirvish
+  :defer t
   :hook
   (emacs-startup . dirvish-override-dired-mode)        ;; override dired
   (dired-mode . (lambda () (display-line-numbers-mode 0)))  ;; no numbers
@@ -676,7 +677,7 @@ I personally don't use line numbers when editing org documents, so we can remove
 #+end_src
 
 
-** Vterm Tweaks :HOOK:
+** Vterm Tweaks :HOOK:BINDING:
 
 Here we make some configuration tweaks to vterm windows and its behavior.
 
@@ -689,7 +690,15 @@ We'll start by editing the window UI. First, we'll disable line numbers for the 
 
 #+end_src
 
-Next we'll focus on the behavior of vterm
+Next we'll focus on the behavior of vterm. Thanks to the keybindings later, I never really need to have =ESC= mapped to emacs when in vterm. So we'll toggle that automatically
+
+#+begin_src emacs-lisp
+(add-hook 'vterm-mode-hook (lambda ()
+                             (evil-collection-vterm-toggle-send-escape)))
+
+#+end_src
+
+I also use =nushell= so we'll set that as the default shell
 
 #+BEGIN_QUOTE
    If you use a different shell (like zsh) you'll need to replace that here
