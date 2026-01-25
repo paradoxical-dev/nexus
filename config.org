@@ -699,3 +699,84 @@ Next we'll focus on the behavior of vterm
 (setq vterm-shell "/bin/nu")
 
 #+end_src
+
+And then we'll set some QoL keybindings. First up, toggling the vterm popup.
+
+Since vterm won't allow us to have a single global keybinding, we'll have to bind it to a =C-c= prefix when within a vterm buffer
+
+#+begin_src emacs-lisp
+;; unmap C-e and use as global toggle
+(after! evil
+  (map! :m "C-e" nil)
+  (map! :g "C-e" #'+vterm/toggle))
+
+;; add toggle from within vterm
+(after! vterm
+  (add-to-list 'vterm-keymap-exceptions "C-e")
+  (map! :map vterm-mode-map "C-c o" #'+vterm/toggle))
+
+#+end_src
+
+Then, we can define some keymaps for working within the terminal
+
+#+begin_src emacs-lisp
+(after! vterm
+  ;; switching workspaces
+  (map! :map vterm-mode-map "C-c ," #'+workspace/switch-right)
+  (map! :map vterm-mode-map "C-c ." #'+workspace/switch-left))
+
+#+end_src
+
+** Languages/LSP
+
+*** Hyprlang :HOOK:
+
+Hyprland's config language isn't outright supported by most packages, so we'll have to manually add all of the behavior.
+
+We'll start by installing =hyprlang-ts-mode= using [[file:packages.el][packages.el]]
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! hyprlang-ts-mode)
+
+#+end_src
+
+Then configuring it to activate on hypr files, and adding it to our tree-sitter source list
+
+#+begin_src emacs-lisp
+(defun my-hyprlang-detect ()
+  "Activate hyprlang-ts-mode for any .conf file in a hypr/ directory."
+  (when (and buffer-file-name
+             (string-match-p "/hypr/.*\\.conf\\'" buffer-file-name))
+    (require 'hyprlang-ts-mode)
+    (hyprlang-ts-mode)))
+
+(add-hook 'find-file-hook #'my-hyprlang-detect)
+
+(add-to-list 'treesit-language-source-alist
+             '(hyprlang "https://github.com/tree-sitter-grammars/tree-sitter-hyprlang"))
+
+#+end_src
+
+#+BEGIN_QUOTE
+   You may need to manually install the grammar before using it
+    =M-x treesit-install-language-grammar= -> =hyprlang=
+#+END_QUOTE
+
+To use the community LSP for hyprland config files, hyprls, we have to add it to our LSP config
+
+#+BEGIN_QUOTE
+   If you do not have the [[github:hyprland-community/hyprls][hyprls]] package, youll need to install it
+#+END_QUOTE
+
+#+begin_src emacs-lisp
+(after! lsp-mode
+  (add-to-list 'lsp-language-id-configuration '(hyprlang-ts-mode . "hyprlang"))
+  (lsp-register-client
+   (make-lsp-client
+    :new-connection (lsp-stdio-connection '("hyprls"))
+    :activation-fn (lsp-activate-on "hyprlang")
+    :server-id 'hyprls)))
+
+(add-hook 'hyprlang-ts-mode-hook #'lsp-deferred)
+
+#+end_src
