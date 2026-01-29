@@ -13,6 +13,11 @@ Inspired by [N Λ N O](https://github.com/rougier/nano-emacs) and using [Doom](h
 >[!QUOTE]
 > "It [Emacs] is a platform for interacting with a computer that is like mathematics is used for describing Physics."
 
+>[!WARNING]
+> 
+> hello
+> test
+
 Emacs does not need to simply be an editor. It can describe how one interacts with a machine.
 
 It cen become the **Nexus** between the user and the system itself.

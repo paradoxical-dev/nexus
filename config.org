@@ -610,6 +610,213 @@ We can then define some hooks for enabling the modeline
 
 #+end_src
 
+
+** Markdown Rendering
+
+*** Faces
+
+Reading markdown in emacs should be /almost/ as much fun as reading org documents. To accomplish this, we set some custom faces for when inside a markdown file.
+
+First, we'll set the heading sizes
+
+#+begin_src emacs-lisp
+(custom-set-faces!
+  '(markdown-header-delimiter-face :height 0.9)
+  '(markdown-header-face-1 :height 1.8 :weight extra-bold)
+  '(markdown-header-face-2 :height 1.4 :weight extra-bold)
+  '(markdown-header-face-3 :height 1.2 :weight extra-bold)
+  '(markdown-header-face-4 :height 1.15 :weight bold)
+  '(markdown-header-face-5 :height 1.1 :weight bold)
+  '(markdown-header-face-6 :height 1.05 :weight semi-bold))
+
+#+end_src
+
+*** Custom Callouts :HOOK:TODO:
+
+We can also set some custom faces for callouts. We'll use these to create overlays that make callouts more styled.
+
+#+begin_src emacs-lisp
+(defface nb/markdown-callout-note
+  '((t :background "#1e1e2e" :extend t))
+  "Face for NOTE callouts")
+
+(defface nb/markdown-callout-warning
+  '((t :background "#3b2f1c"
+       :foreground "#fbe1b3"
+       :italic t
+       :extend t))
+  "Face for WARNING callouts")
+
+(defface nb/markdown-callout-important
+  '((t :background "#241e2b"
+       :foreground "#B87FFF"
+       :italic t
+       :extend t))
+  "Face for IMPORTANT callouts")
+
+(defface nb/markdown-callout-tip
+  '((t :background "#1c3624"
+       :foreground "#09B43A"
+       :italic t
+       :extend t))
+  "Face for TIP callouts")
+
+#+end_src
+
+Next, we can link those faces to their header names, and include some header alternatives that we can use to override them in our overlay
+
+#+begin_src emacs-lisp
+(defun nb/markdown-callout-face (type)
+  (pcase type
+    ("NOTE"    'nb/markdown-callout-note)
+    ("WARNING" 'nb/markdown-callout-warning)
+    ("TIP"     'nb/markdown-callout-tip)
+    ("IMPORTANT"     'nb/markdown-callout-important)))
+
+(defun nb/markdown-callout-header (type)
+  (pcase type
+    ("WARNING"       " Warning")
+    ("NOTE"          "󰏫 Note")
+    ("TIP"           " Tip")
+    ("IMPORTANT"     " Important")))
+
+#+end_src
+
+Then, we'll define a bar to replace the =>= characters and a function to do so.
+
+#+begin_src emacs-lisp
+;; don't hide by default (markdown-mode)
+(setq markdown-blockquote-display-char ">")
+
+(defun nb/markdown-callout-line-bar (pos face)
+  (let ((ov (make-overlay pos (1+ pos))))
+    (overlay-put ov 'display "┃ ")
+    (overlay-put ov 'face face)
+    (overlay-put ov 'nb-callout t)
+    (overlay-put ov 'evaporate t)))
+
+(defun nb/markdown-callout-replace-header (start end type)
+  (let ((ov (make-overlay start end)))
+    (overlay-put ov 'display (nb/markdown-callout-header type))
+    (overlay-put ov 'face 'bold)
+    (overlay-put ov 'nb-callout t)
+    (overlay-put ov 'evaporate t)))
+
+#+end_src
+
+We also need a function to clear out any old overlays after they've been created
+
+#+begin_src emacs-lisp
+(defun nb/markdown-clear-callout-overlays ()
+  (remove-overlays (point-min) (point-max) 'nb-callout t))
+
+#+end_src
+
+To put it all together we'll create the overlays, searching for the header names using regex and applying each of these components; Then hooking it into markdown-mode and watching for buffer changes
+
+#+begin_src emacs-lisp
+(defun nb/markdown-apply-callout-overlays ()
+  (save-excursion
+    (let ((case-fold-search t))
+      (goto-char (point-min))
+      (nb/markdown-clear-callout-overlays)
+
+      (while (re-search-forward
+              "^>\\s-*\\[!\\([a-z]+\\)\\].*\\(?:\n>.*\\)*"
+              nil t)
+        (let* ((type (upcase (match-string 1)))
+               (block-start (match-beginning 0))
+               (raw-end (match-end 0))
+               (block-end (if (< raw-end (point-max))
+                              (1+ raw-end)
+                            raw-end))
+               (face (nb/markdown-callout-face type)))
+
+          ;; background overlay
+          (when face
+            (let ((ov (make-overlay block-start block-end)))
+              (overlay-put ov 'nb-callout t)
+              (overlay-put ov 'face face)
+              (overlay-put ov 'evaporate t)))
+
+          ;; walk each line in the block
+          (save-excursion
+            (goto-char block-start)
+            (while (< (point) block-end)
+              (when (looking-at "^>\\s-*")
+                ;; replace >
+                (nb/markdown-callout-line-bar (point) face)
+
+                ;; header replacement
+                (when (looking-at "^>\\s-*\\[!\\([a-z]+\\)\\]")
+                  (nb/markdown-callout-replace-header
+                   (match-beginning 0)
+                   (match-end 0)
+                   type)))
+              (forward-line 1))))))))
+
+#+end_src
+
+#+begin_src emacs-lisp
+(defun nb/markdown-refresh-callouts (&rest _)
+  (when (derived-mode-p 'markdown-mode)
+    (nb/markdown-apply-callout-overlays)))
+
+;; refresh on buffer change
+(add-hook 'markdown-mode-hook
+          (lambda ()
+            (nb/markdown-apply-callout-overlays)
+            (add-hook 'after-change-functions
+                      #'nb/markdown-refresh-callouts
+                      nil t)))
+
+#+end_src
+
+*** Hiding Elements :HOOK:
+
+Here, we have a functions which describe how to hide elements (like header marks) when editing markdown docs, while showing the elements when editing that line
+
+#+begin_src emacs-lisp
+ (defvar nb/current-line '(0 . 0)
+   "(start . end) of current line in current buffer")
+ (make-variable-buffer-local 'nb/current-line)
+
+ (defun nb/unhide-current-line (limit)
+   "Font-lock function"
+   (let ((start (max (point) (car nb/current-line)))
+         (end (min limit (cdr nb/current-line))))
+     (when (< start end)
+       (remove-text-properties start end
+                       '(invisible t display "" composition ""))
+       (goto-char limit)
+       t)))
+
+ (defun nb/refontify-on-linemove ()
+   "Post-command-hook"
+   (let* ((start (line-beginning-position))
+          (end (line-beginning-position 2))
+          (needs-update (not (equal start (car nb/current-line)))))
+     (setq nb/current-line (cons start end))
+     (when needs-update
+       (font-lock-flush))))
+
+ (defun nb/markdown-unhighlight ()
+   "Enable markdown concealling"
+   (interactive)
+   (markdown-toggle-markup-hiding 'toggle)
+   (font-lock-add-keywords nil '((nb/unhide-current-line)) t)
+   (add-hook 'post-command-hook #'nb/refontify-on-linemove nil t))
+
+#+end_src
+
+Then we hook that into =markdown-mode=
+
+#+begin_src emacs-lisp
+(add-hook 'markdown-mode-hook #'nb/markdown-unhighlight)
+
+#+end_src
+
+
 * Editor
 
 ** Dired Replacement :BINDING:
@@ -787,5 +994,17 @@ To use the community LSP for hyprland config files, hyprls, we have to add it to
     :server-id 'hyprls)))
 
 (add-hook 'hyprlang-ts-mode-hook #'lsp-deferred)
+
+#+end_src
+
+
+** Mu4e
+
+I use mu4e extensively. So it's a no brainer we configure it. We start by installing the [[github:rougier/mu4e-dashboard][mu4e-dashboard]] package into [[file:packages.el][packages.el]]
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! mu4e-dashboard
+  :recipe (:host github
+           :repo "rougier/mu4e-dashboard"))
 
 #+end_src
