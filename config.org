@@ -151,6 +151,7 @@ in the main window instead of creating a new split."
     (hl-line-mode)
     ;; (face-remap-add-relative 'hl-line :inherit 'nano-subtle)
     (nano-modeline nano-modeline-format-config 'header)
+    (display-line-numbers-mode 0)
     ;; (setq header-line-format
     ;;       '(:eval
     ;;         (nano-modeline-render nil
@@ -228,7 +229,8 @@ Toggle code block folding; starting folded
           (hs-show-block)))
       (setq my/imenu-list-folding-status (not my/imenu-list-folding-status)))))
 
-(bind-key "S-<tab>" #'my/imenu-list-toggle-folding imenu-list-major-mode-map)
+;; (bind-key "S-<tab>" #'my/imenu-list-toggle-folding imenu-list-major-mode-map)
+(bind-key "C-<tab>" #'my/imenu-list-toggle-folding imenu-list-major-mode-map)
 
 #+end_src
 
@@ -380,7 +382,7 @@ This provide the my/org-imenu-filter that allows us to filter thw sidebar entrie
 #+end_src
 
 
-*** Config mode
+*** Config mode :BINDING:
 
 This section defines the =my/config-mode= to ease navigating and editing the configuration file.
 
@@ -439,8 +441,6 @@ The minor mode for configuration
             (bind-key "C-c C-S-p" #'my/config-mode-prev-section map)
             (bind-key "C-c C-S-n" #'my/config-mode-next-section map)
             (bind-key "C-`"       #'my/org-sidebar-toggle map)
-            ;; (bind-key "C-c C-v t" #'my/org-babel-tangle map)   ;; We dont need these
-            ;; (bind-key "C-c t"     #'my/org-toggle-blocks map)
             map)
 
   (require 'org)
@@ -456,7 +456,8 @@ And lastly, define a shortcut function to open this file with config mode enable
   "Open Doom config in the current frame with config-mode enabled."
 
   (interactive)
-  (find-file "~/.config/doom/config.org")
+  ;; (find-file "~/.config/doom/config.org")
+  (find-file (expand-file-name "config.org" doom-user-dir))
   (my/config-mode 1))
 
 (map! :leader
