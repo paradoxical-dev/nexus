@@ -28,6 +28,15 @@ Additionally, if at any point you add or remove a heading you can use the bindin
 
 * Core
 
+** Secrets
+
+We'll need a place to store personal information such as api keys or email addresses. For this I use a file stored in the doom config directory called =secrets.el=. Since this information will vary from user to user, you'll need to create this yourself.
+
+#+begin_src emacs-lisp
+(load! "secrets")
+
+#+end_src
+
 ** Nano Packages
 
 There are a few UI based nano packages that need to be installed first. We'll declare them through the [[file:packages.el][packages.el]] file
@@ -89,8 +98,6 @@ Then, we need to disable the popup rules for this sidebar window
 And create a custom nano-modeline format rule for the sidebar. I basically just copy and pasted the default format and hardcoded the file name.
 
 #+begin_src emacs-lisp
-;; (require 'nano-modeline) ;; NOTE: possibly move this elsewhere
-
 (defcustom nano-modeline-format-config
   (cons '(nano-modeline-element-buffer-status
           nano-modeline-element-space
@@ -102,6 +109,7 @@ And create a custom nano-modeline format rule for the sidebar. I basically just 
   "Config mode sidebar format"
   :type 'nano-modeline-type
   :group 'nano-modeline-modes)
+
 #+end_src
 
 #+begin_src emacs-lisp
