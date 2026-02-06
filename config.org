@@ -504,8 +504,6 @@ Then increasing the default line height.
 #+begin_src emacs-lisp
 (setq-default line-spacing 6)
 ;; (add-hook 'org-mode-hook (lambda () (setq-default line-spacing 6)))
-;; (add-hook 'org-mode-hook (lambda () (setq-default line-spacing 6)))
-;; (add-hook 'org-mode-hook (lambda () (setq-default line-spacing 6)))
 
 #+end_src
 
@@ -883,14 +881,55 @@ Then we can override dired by replacing its default mapping
 
 ** Org Tweaks
 
-*** Remove Line Numbers :HOOK:
+*** Core :HOOK:
+
+Here, we'll set =org-mode='s core behavior and ui.
 
 I personally don't use line numbers when editing org documents, so we can remove those here
 
 #+begin_src emacs-lisp
-(add-hook 'org-mode-hook (lambda () (global-display-line-numbers-mode 0)))
+(add-hook 'org-mode-hook (lambda () (display-line-numbers-mode 0)))
 
 #+end_src
+
+We'll also And change the header sizes accordingly
+
+#+begin_src emacs-lisp
+(custom-set-faces!
+ '(org-level-1 :height 1.5 :weight extra-bold)
+ '(org-level-2 :height 1.3 :weight extra-bold)
+ '(org-level-3 :height 1.1 :weight bold)
+ '(org-level-4 :height 1.0 :weight bold)
+ '(org-level-5 :height 0.95 :weight semi-bold))
+
+#+end_src
+
+Then, we'll change some of the =org-modern= featues
+
+#+begin_src emacs-lisp
+(with-eval-after-load 'org
+  (setq
+   org-modern-star 'replace                             ;; header style
+   org-modern-replace-stars "◉○◈◇✳"                     ;; header replacement
+   org-modern-fold-stars nil                            ;; fold settings
+   org-modern-list '((?- . "•") (?+ . "◦") (?* . "◆"))  ;; list replacements
+   org-startup-with-inline-images t                     ;; default images
+   org-startup-with-latex-preview t                     ;; default latex
+   org-hide-emphasis-markers t                          ;; no markers
+   org-pretty-entities t)                               ;; enable modern style
+  (global-org-modern-mode))                             ;; every org file
+
+#+end_src
+
+
+
+
+*** Layout
+
+
+
+*** Captures
+
 
 
 ** Vterm Tweaks :HOOK:BINDING:
