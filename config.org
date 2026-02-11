@@ -587,8 +587,14 @@ I use relative line numbers throughout the editor for easier vim navigation. We 
 (setq display-line-numbers-type 'relative)
 (global-display-line-numbers-mode)
 
-;; help mode
+;; org-mode
+(add-hook 'org-mode-hook (lambda () (display-line-numbers-mode 0)))
+(add-hook 'org-agenda-mode-hook (lambda () (display-line-numbers-mode 0)))
+(add-hook 'nano-agenda-mode-hook (lambda () (display-line-numbers-mode 0)))
+
+;; help/message mode
 (add-hook 'help-mode-hook (lambda () (display-line-numbers-mode 0)))
+(add-hook 'message-mode-hook (lambda () (display-line-numbers-mode 0)))
 
 ;; remove for treenmacs
 (after! treemacs
@@ -895,14 +901,7 @@ Then we can override dired by replacing its default mapping
 
 Here, we'll set =org-mode='s core behavior and ui.
 
-I personally don't use line numbers when editing org documents, so we can remove those here
-
-#+begin_src emacs-lisp
-(add-hook 'org-mode-hook (lambda () (display-line-numbers-mode 0)))
-
-#+end_src
-
-We'll also And change the header sizes accordingly
+First we'll change the header sizes accordingly
 
 #+begin_src emacs-lisp
 (custom-set-faces!
@@ -932,7 +931,38 @@ Then, we'll change some of the =org-modern= featues
 #+end_src
 
 
+Next we'll setup the agendas. We'll start by installing the [[github:rougier/nano-agenda][nano-agenda]] and [[github:alphapapa/org-super-agenda][super-agenda]] packages using [[file:packages.el][packages.el]]
 
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! nano-agenda
+  :recipe (:type git
+           :host github
+           :repo "rougier/nano-agenda"
+           :branch "rewrite"))
+
+(package! org-super-agenda)
+
+#+end_src
+
+Then we can configure them, starting with nano-agenda
+
+#+begin_src emacs-lisp
+(use-package! nano-agenda
+  :after org
+  :config
+  (setq nano-agenda-header-show nil)) ;; we set our own in the 'UI -> Modeline' section
+
+#+end_src
+
+And moving onto super-agenda
+
+#+begin_src emacs-lisp
+(use-package! org-super-agenda
+  :after org
+  :config
+  (org-super-agenda-mode))
+
+#+end_src
 
 *** Layout
 
