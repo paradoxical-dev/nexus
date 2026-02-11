@@ -579,7 +579,7 @@ We also need to change the face value for the gap between windows. However, we n
 #+end_src
 
 
-** Line Numbers :MODE:
+** Line Numbers :MODE:HOOK:
 
 I use relative line numbers throughout the editor for easier vim navigation. We can apply this globally using the =global-display-line-numbers-mode= and then conditionally remove them for certain buffers (like org mode)
 
@@ -587,6 +587,16 @@ I use relative line numbers throughout the editor for easier vim navigation. We 
 (setq display-line-numbers-type 'relative)
 (global-display-line-numbers-mode)
 
+;; help mode
+(add-hook 'help-mode-hook (lambda () (display-line-numbers-mode 0)))
+
+;; remove for treenmacs
+(after! treemacs
+  (add-hook 'treemacs-mode-hook (lambda () (display-line-numbers-mode 0))))
+
+;; remove for all dap-ui windows
+(after! dap-ui-mode
+  (add-hook 'dap-ui-mode-hook (lambda () (display-line-numbers-mode 0))))
 #+end_src
 
 
@@ -1047,9 +1057,9 @@ To use the community LSP for hyprland config files, hyprls, we have to add it to
    (make-lsp-client
     :new-connection (lsp-stdio-connection '("hyprls"))
     :activation-fn (lsp-activate-on "hyprlang")
-    :server-id 'hyprls)))
+    :server-id 'hyprls))
+  (add-hook 'hyprlang-ts-mode-hook #'lsp-deferred))
 
-(add-hook 'hyprlang-ts-mode-hook #'lsp-deferred)
 
 #+end_src
 
@@ -1113,7 +1123,7 @@ We also need to add the headerline using =nano-modeline=
 #+end_src
 
 
-** Debugger
+** Debugger :BINDING:
 
 By default, Doom will use =eglot-mode= and pair it with =dape= for debugging. However, since we use =lsp-mode= instead, we'll need to confgure =dap-mode= to work along side it.
 
