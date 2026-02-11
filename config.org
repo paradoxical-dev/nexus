@@ -1006,18 +1006,11 @@ I also use =nushell= so we'll set that as the default shell
 
 And then we'll set some QoL keybindings. First up, toggling the vterm popup.
 
-Since vterm won't allow us to have a single global keybinding, we'll have to bind it to a =C-c= prefix when within a vterm buffer
+Since vterm won't allow us to have a single global keybinding, we'll have to bind it to a fake prefix globally and then translate the =C-e= binding to call this instead
 
 #+begin_src emacs-lisp
-;; unmap C-e and use as global toggle
-(after! evil
-  (map! :m "C-e" nil)
-  (map! :g "C-e" #'+vterm/toggle))
-
-;; add toggle from within vterm
-(after! vterm
-  (add-to-list 'vterm-keymap-exceptions "C-e")
-  (map! :map vterm-mode-map "C-c o" #'+vterm/toggle))
+(define-key key-translation-map (kbd "C-e") (kbd "<f20>"))
+(map! :g "<f20>" #'+vterm/toggle)
 
 #+end_src
 
