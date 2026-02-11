@@ -1183,7 +1183,25 @@ And define some base keybindings before going into debugger specific configurati
         "do" #'dap-step-out)
   (map! :leader
         :desc "Continue"
-        "dn" #'dap-continue))
+        "dc" #'dap-continue))
 
 #+end_src
+
+
+*** cpp-tools :HOOK:
+
+We'll require based on the mode. For cpp-tools we only focus on the base C/C++ modes and their tree-sitter counter parts.
+
+#+begin_src emacs-lisp
+(add-hook 'c-mode-hook (lambda ()
+                         (require 'dap-cpptools)))
+(add-hook 'c++-mode-hook (lambda ()
+                           (require 'dap-cpptools)))
+(add-hook 'c-ts-mode-hook (lambda ()
+                            (require 'dap-cpptools)))
+(add-hook 'c++-ts-mode-hook (lambda ()
+                              (require 'dap-cpptools)))
+
+#+end_src
+
 
