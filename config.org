@@ -645,6 +645,45 @@ We can then define some hooks for enabling the modeline
 #+end_src
 
 
+*** Org Mode
+
+Org mode needs a special tweak for its modeline. This is because we enable =olivetti-mode= for centering org buffers.
+
+Nano modeline describes a function =nano-modeline-= which applies the padding for the alignment of the modeline. However, we need to patch it so that it applies the default face to *both* sides of padding. Otherwise, the background will overflow into the padding of the buffers.
+
+Since its just a small change, I chose to patch the function rather than create a personal fork or pull request.
+
+#+begin_src emacs-lisp
+(after! nano-modeline
+  (defun nano-modeline-padding-to (&optional left right face)
+    "This function returns the left and right padding to precisely align the
+mode-line (or header-line) to window, margin, fringe or text extents,
+depending on LEFT and RIGHT. LEFT and RIGHT can be constant ('window,
+'fringe, 'margin or 'text) or a cons specifying (what . (char-size
+. pixel-size)). It returns two strings that must be respectively
+prepended and appended to the mode-line (or header-line). An optional
+FACE can be given to be used for the prefix and the suffix."
+
+    (let* ((left (or left (car nano-modeline-alignment)))
+           (left (if (not (consp left))
+                     (cons left '(0 . 0))
+                   left))
+           (right (or right (cdr nano-modeline-alignment)))
+           (right (if (not (consp right))
+                      (cons right '(0 . 0))
+                    right))
+           (face (or face `(:foreground ,(face-foreground 'default)
+                            :background ,(face-background 'default)
+                            :underline nil :overline nil :inherit nil :box nil))))
+      (cons (concat (propertize " " 'display (nano-modeline-align-to 'left 'window) 'face face)
+                    (propertize " " 'display (nano-modeline-align-to 'left (car left) (cadr left) (cddr left))
+                                'face face))
+            (concat (propertize " " 'display (nano-modeline-align-to 'right (car right) (cadr right) (cddr right)))
+                    (propertize " " 'display (nano-modeline-align-to 'right 'window) 'face face))))))
+
+#+end_src
+
+
 ** Markdown Rendering
 
 *** Faces
@@ -977,7 +1016,31 @@ And moving onto super-agenda
 
 *** Layout
 
+Typically I use a centered layout when reading and editing org documents. For this we use the [[github:rnkn/olivetti][olivetti]] package
 
+We'll start by installing it into the [[file:packages.el][packages.el]] file
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! olivetti)
+
+#+end_src
+
+Then configure it to a fixed width and hook it into org-mode. However, we don't want it enabled when using =config-mode= so we'll need to handle that as well.
+
+#+begin_src emacs-lisp
+(defun my/org-enable-olivetti ()
+  "Enable olivetti except in config.org"
+  (unless (string-match-p "^config\\.org" (buffer-name))
+    (olivetti-mode 1)))
+
+(use-package! olivetti
+  :hook
+  (org-mode . my/org-enable-olivetti)
+  (nano-agenda-mode . olivetti-mode)
+  :config
+  (setq olivetti-body-width 75))
+
+#+end_src
 
 *** Captures
 
@@ -1011,7 +1074,7 @@ I also use =nushell= so we'll set that as the default shell
 #+END_QUOTE
 
 #+begin_src emacs-lisp
-(setq vterm-shell "/bin/nu")
+;; (setq vterm-shell "/bin/nu")
 
 #+end_src
 
