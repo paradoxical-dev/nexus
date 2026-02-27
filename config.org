@@ -1207,9 +1207,52 @@ To use the community LSP for hyprland config files, hyprls, we have to add it to
     :server-id 'hyprls))
   (add-hook 'hyprlang-ts-mode-hook #'lsp-deferred))
 
+#+end_src
+
+
+*** SQL
+
+Since Doom doesn't bundle an SQL LSP by default, we'll need to configure the builtin one form =lsp-mode=
+
+#+begin_src emacs-lisp
+(add-hook 'sql-mode-hook 'lsp-deferred)
+(after! lsp-mode
+  ;; connection configuration is handled by a .sqls/config.json file in
+  ;; the project root. see https://emacs-lsp.github.io/lsp-mode/page/lsp-sqls
+  (setq lsp-sqls-workspace-config-path "root"))
 
 #+end_src
 
+#+BEGIN_QUOTE
+   If you do not have the [[github:sqls-server/sqls][sqls]] package, you'll need to install it
+#+END_QUOTE
+
+For a proper database client, *Nexus* employs the [[github:kostafey/ejc-sql][ejc-sql]] package. Although =sqls= is /capable/ of executing queries, it fails in comparison to =ejc=.
+
+We'll first package it into [[file:packages.el][packages.el]] then hook it into =sql-mode=
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! ejc-sql)
+
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package! ejc-sql
+  :hook
+  (sql-mode . ejc-sql-mode)
+  :defer 0)
+
+#+end_src
+
+On top of that, a custom function to suppress org-element warnings from within the results buffer. Otherwise, using the =org-export-table= command will result in a warning every time
+
+#+begin_src emacs-lisp
+(defun ejc-suppress-org-element-warning ()
+  (setq-local warning-suppress-types '((org-element))))
+
+(add-hook 'ejc-result-mode-hook #'ejc-suppress-org-element-warning)
+
+#+end_src
 
 ** Mu4e
 
