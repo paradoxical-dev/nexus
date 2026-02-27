@@ -990,6 +990,38 @@ Then, we'll change some of the =org-modern= featues
 
 #+end_src
 
+And include the =org-roam-ui= package into [[file:packages.el][packages.el]]
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! org-roam-ui)
+
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package! org-roam-ui
+  :after org-roam
+  :config
+  (setq org-roam-ui-sync-theme t
+        org-roam-ui-follow t
+        org-roam-ui-update-on-save t
+        org-roam-ui-open-on-start t))
+
+#+end_src
+
+We also need to update the org and org-roam default locations
+
+#+begin_src emacs-lisp
+(setq org-directory "~/org")
+(setq org-roam-directory "~/org")
+
+#+end_src
+
+Another handy tool I use is [[github:alphapapa/org-ql][org-ql]]. We'll install this into [[file:packages.el][packages.el]]
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! org-ql)
+
+#+end_src
 
 Next we'll setup the agendas. We'll start by installing the [[github:rougier/nano-agenda][nano-agenda]] and [[github:alphapapa/org-super-agenda][super-agenda]] packages using [[file:packages.el][packages.el]]
 
@@ -1023,6 +1055,14 @@ And moving onto super-agenda
   (org-super-agenda-mode))
 
 #+end_src
+
+We'll also need to set the =org-agenda-files=. I set it to the entire directory recursively due to the way my layout is setup.
+
+#+begin_src emacs-lisp
+(setq org-agenda-files
+      (directory-files-recursively "~/org" "\\.org$"))
+#+end_src
+
 
 *** Layout
 
