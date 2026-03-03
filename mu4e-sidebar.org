@@ -1,5 +1,5 @@
 
-* Mailboxes                 *[[mu:flag:unread|%2d][ 4]]*
+* Mailboxes          *[[mu:flag:unread|%2d][4]]*
 
 /[i]/ [[mu:m:/inria/inbox or m:/gmail/inbox or m:/univ/inbox][Inbox]] /.............../ /[[mu:m:/inria/inbox or m:/gmail/inbox or m:/univ/inbox|%2d][ 4]]/
 /[f]/ [[mu:flag:flagged][Important]] /........../ /[[mu:flag:flagged|%3d][281]]/
@@ -26,18 +26,6 @@
 
 [[mu:from:rms@gnu.org][Richard Stallman]]       /[[mu:from:rms@gnu.org|%3d][---]]/ 
 [[mu:from:djcb@djcbsoftware.nl][Dirk-Jan C. Binnema]] /[[mu:from:djcb@djcbsoftware.nl|%2d][    --]]/ 
-
-** Mailing lists
-
-[[mu:list:emacs-devel.gnu.org][Emacs development]] /.../ /[[mu:list:emacs-devel.gnu.org|%4d][3538]]/
-[[mu:list:mu-discuss.googlegroups.com][Mu4e discussions]] /...../ /[[mu:list:mu-discuss.googlegroups.com|%3d][277]]/
-[[mu:list:numpy-discussion.python.org][Numpy discussion]] /..../ /[[mu:list:numpy-discussion.python.org|%4d][1065]]/
-
-** Date
-
-[[mu:flag:attach][Year 2020]] /........../ /[[mu:date:20200101..20201231|%5d][29260]]/
-[[mu:date:20190101..20191231][Year 2019]] /........../ /[[mu:date:20190101..20191231|%5d][19845]]/
-[[mu:date:20180101..20181231][Year 2018]] /.........../ /[[mu:date:20180101..20181231|%4d][3038]]/
 
 * /Configuration/
 :PROPERTIES:
@@ -70,4 +58,4 @@ mu find --sortfield=date --reverse --fields "f s" $query  | head -$count
 #+KEYMAP: W | mu4e-headers-toggle-include-related 
 #+KEYMAP: O | mu4e-headers-change-sorting
 #+KEYMAP: x | mu4e-mark-execute-all t
-#+KEYMAP: <return> | org-open-at-point
+#+KEYMAP: <return> | my/mu4e-dashboard-open
