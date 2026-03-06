@@ -621,48 +621,40 @@ We also need to change the face value for the gap between windows. However, we n
 
 #+end_src
 
-
 ** Line Numbers :MODE:HOOK:
 
-I use relative line numbers throughout the editor for easier vim navigation. We can apply this globally using the =global-display-line-numbers-mode= and then conditionally remove them for certain buffers (like org mode)
+I use relative line numbers throughout the editor for easier vim navigation. However, this is mostly useful in code buffers, and not needed in popups, message buffers, etc.
+
+So, we can set the =prog= and =conf= modes to default with line numbers, leaving everything else unchanged
 
 #+begin_src emacs-lisp
 (setq display-line-numbers-type 'relative)
-(global-display-line-numbers-mode)
+(add-hook 'prog-mode-hook #'display-line-numbers-mode)
+(add-hook 'conf-mode-hook #'display-line-numbers-mode)
 
-;; help/message modes
-(add-hook 'help-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'helpful-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'Man-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'message-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'messages-buffer-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'special-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'compilation-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'comint-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'apropos-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'debugger-mode-hook (lambda () (display-line-numbers-mode 0)))
+;; remove org line numbers
+(after! org
+  (add-hook 'org-mode-hook (lambda () (display-line-numbers-mode 0)))
+  (add-hook 'org-agenda-mode-hook (lambda () (display-line-numbers-mode 0)))
+  (add-hook 'nano-agenda-mode-hook (lambda () (display-line-numbers-mode 0))))
 
-;; pdf-view
-(add-hook 'pdf-view-mode-hook (lambda () (display-line-numbers-mode 0)))
+;; remove for markdown buffers
+(add-hook 'gfm-mode-hook (lambda () (display-line-numbers-mode 0)))
 
-;; org-mode
-(add-hook 'org-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'org-agenda-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'nano-agenda-mode-hook (lambda () (display-line-numbers-mode 0)))
-
-;; dirvish
-(add-hook 'dirvish-special-preview-mode-hook (lambda () (display-line-numbers-mode 0)))
-(add-hook 'dirvish-directory-view-mode-hook (lambda () (display-line-numbers-mode 0)))
-
-;; treenmacs
-(after! treemacs
-  (add-hook 'treemacs-mode-hook (lambda () (display-line-numbers-mode 0))))
-
-;; remove for all dap-ui windows
-(after! dap-ui-mode
-  (add-hook 'dap-ui-mode-hook (lambda () (display-line-numbers-mode 0))))
 #+end_src
 
+** Vertico Posframe
+
+Here we just tweak the positioning and size of the posframe for vertico's completion buffers
+
+#+begin_src emacs-lisp
+(use-package! vertico-posframe
+  :config
+  (setq vertico-posframe-min-width 50
+        vertico-posframe-min-height 15
+        vertico-posframe-poshandler #'posframe-poshandler-frame-top-center))
+
+#+end_src
 
 ** Modeline :HOOK:
 
