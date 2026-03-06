@@ -1199,6 +1199,56 @@ Then, we can define some keymaps for working within the terminal
 
 #+end_src
 
+I also like to have a =posframe= popup option for using the terminal. This will be a floating window in the middle of the screen, toggled using a keybind
+
+The function itself is pretty simple. We create frame if one doesn't exist, toggle the frame if it does
+
+#+begin_src emacs-lisp
+(defun my/vterm-posframe-toggle ()
+  "Toggle a floating vterm in a posframe."
+  (interactive)
+  (let* ((buf-name "*vterm-posframe*")
+         (buf (get-buffer buf-name))
+         (pframe (and buf (buffer-local-value 'posframe--frame buf))))
+    (cond
+
+     ((and pframe (frame-live-p pframe) (frame-visible-p pframe))
+      (posframe-hide buf-name))
+
+     ((and pframe (frame-live-p pframe))
+      (posframe-show buf-name
+                     :poshandler #'posframe-poshandler-frame-center
+                     :width 100
+                     :height 30
+                     :border-width 5
+                     :background-color "#1e2127"
+                     :accept-focus t)
+      (select-frame-set-input-focus pframe))
+
+     (t
+      (unless buf
+        (with-current-buffer (get-buffer-create buf-name)
+          (vterm-mode)))
+      (let ((new-frame (posframe-show buf-name
+                                      :poshandler #'posframe-poshandler-frame-center
+                                      :width 100
+                                      :height 30
+                                      :border-width 5
+                                      :background-color "#1e2127"
+                                      :accept-focus t)))
+        ;; allow time to initialize frame before focus
+        (run-with-timer 0.2 nil #'select-frame-set-input-focus new-frame))))))
+
+#+end_src
+
+Since this is less likely to be used as much, we can globally bind it to a =C-c= prefix mapping
+
+#+begin_src emacs-lisp
+(map! :g :desc "Toggle vterm posframe" "C-c t" #'my/vterm-posframe-toggle)
+;; (global-set-key (kbd "C-c t") #'my/vterm-posframe-toggle)
+
+#+end_src
+
 ** Languages/LSP
 
 *Nexus* uses =lsp-mode= over =eglot= for managing and configuring LSPs. This choice is due to:
