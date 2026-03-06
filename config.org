@@ -1799,5 +1799,55 @@ After installing, we can set the load path and require the desired package(s) wi
 * Custom
 
 #+begin_src emacs-lisp
+(setq my/section-start-time (current-time))
+
+#+end_src
+
+** Btop Posframe
+
+Here we create a toggleable btop instance inside a posframe. I've tried other system monitor tools more native to emacs but nothing comes close to btop. 
+
+#+begin_src emacs-lisp
+(defun my/btop-posframe-toggle ()
+  "Toggle a floating btop in a posframe."
+  (interactive)
+  (let* ((buf-name "*btop-posframe*")
+         (buf (get-buffer buf-name))
+         (pframe (and buf (buffer-local-value 'posframe--frame buf))))
+    (cond
+     ((and pframe (frame-live-p pframe) (frame-visible-p pframe))
+      (posframe-hide buf-name))
+     ((and pframe (frame-live-p pframe))
+      (posframe-show buf-name
+                     :poshandler #'posframe-poshandler-frame-center
+                     :width 130
+                     :height 40
+                     :border-width 5
+                     :background-color "#1e2127"
+                     :accept-focus t)
+      (select-frame-set-input-focus pframe))
+     (t
+      (with-current-buffer (get-buffer-create buf-name)
+        (vterm-mode)
+        (evil-collection-vterm-toggle-send-escape)
+        (vterm-send-string "btop\n"))
+      (let ((new-frame (posframe-show buf-name
+                                      :poshandler #'posframe-poshandler-frame-center
+                                      :width 130
+                                      :height 40
+                                      :border-width 5
+                                      :background-color "#1e2127"
+                                      :accept-focus t)))
+        (run-with-timer 0.2 nil #'select-frame-set-input-focus new-frame))))))
+
+;; (global-set-key (kbd "C-c b") #'my/btop-posframe-toggle)
+(map! :leader :desc "Toggle Btop" "os" #'my/btop-posframe-toggle)
+
+#+end_src
+
+** Benchmark
+
+#+begin_src emacs-lisp
+(my/report-time "Custom")
 
 #+end_src
