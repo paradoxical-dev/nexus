@@ -1145,7 +1145,219 @@ Then configure it to a fixed width and hook it into org-mode. However, we don't 
 
 *** Captures
 
+**** Projects
 
+Projects in org mode are directory independent, stored under =Projects/<project-name>= within the org-directory. Within this directory there is 2 key files: =overview.org= and =tasks.org=. The overview is where the core project goal is as well as requirements, etc. and the tasks file holds all of the tasks for the given project. Each project will also include a =logs= directory for logging progress, debugging, etc.
+
+To make project creation easier we first create a custom function to
+1. Prompt for the project name and (optionally) subject
+2. Create project directory
+3. Populate project directory with files and boiler plate
+
+#+begin_src emacs-lisp
+;; used to replace spaces and hypens in project name for file tag
+(defun my/slugify (s)
+   (replace-regexp-in-string
+    "[^a-zA-Z0-9]"
+    "_"
+    s))
+
+(defun my/org-roam-create-project (name subject)
+  "Create a new org project with NAME.
+   Optionally add SUBJECT as a filetag if non-empty."
+  (interactive
+   (list
+    (read-string "Project name: ")
+    (read-string "Subject (optional): ")))
+
+  (let* ((roam-dir (file-name-as-directory org-roam-directory))
+         (base-dir (expand-file-name "Projects/" roam-dir))
+         (project-dir (expand-file-name name base-dir))
+         (logs-dir (expand-file-name "logs/" project-dir))
+         (overview-file (expand-file-name "overview.org" project-dir))
+         (tasks-file (expand-file-name "tasks.org" project-dir))
+         (slug-name (my/slugify name))
+         (slug-subject (unless (string-empty-p subject)
+                (my/slugify subject)))
+         (filetags (concat ":project:" slug-name ":"
+                  (when slug-subject
+                    (concat slug-subject ":")))))
+
+    (make-directory logs-dir t)
+
+    (unless (file-exists-p overview-file)
+      (with-temp-file overview-file
+        (insert ":PROPERTIES:\n")
+        (insert ":ID: " (org-id-uuid) "\n")
+        (insert ":END:\n")
+        (insert "#+TITLE: " name " Overview\n")
+        (insert "#+FILETAGS: " filetags "\n\n")
+        (insert "* Overview\n\n")
+        (insert "* Tasks\n\n")
+        (insert "* Attachments\n\n")))
+
+    (unless (file-exists-p tasks-file)
+      (with-temp-file tasks-file
+        (insert ":PROPERTIES:\n")
+        (insert ":ID: " (org-id-uuid) "\n")
+        (insert ":END:\n")
+        (insert "#+TITLE: " name " Tasks\n")
+        (insert "#+FILETAGS: :project:" slug-name ":tasks:\n\n")
+        (insert "* TODO Initial task\n")))
+
+    (org-roam-db-sync)
+    (find-file overview-file)
+    (message "Org-roam project '%s' created successfully!" name)))
+
+#+end_src
+
+Then we can bind this function to its own keybinding
+
+#+begin_src emacs-lisp
+(map! :leader
+      :desc "Create new project"
+      "np" #'my/org-roam-create-project)
+
+#+end_src
+
+Next, we need a way of quickly extending/creating the log files per project. We'll make a function which does the following:
+1. Prompts to select from available projects
+2. Captures and stores the project name
+3. Returns the log file path
+
+#+begin_src emacs-lisp
+;; variables returned by helper functions
+(defvar my/org-roam--current-project nil)
+(defvar my/org-roam--current-slug nil)
+
+(defun my/org-roam-project-log-path (node)
+  (let* ((project
+          (completing-read
+           "Project: "
+           (directory-files
+            (expand-file-name "Projects/" org-roam-directory)
+            nil "^[^.]")))
+         (slug (my/slugify project))
+         (date (format-time-string "%Y-%-m-%-d"))
+         (logs-dir (expand-file-name
+                    (concat "Projects/" project "/logs/")
+                    org-roam-directory)))
+
+    (setq my/org-roam--current-project project)
+    (setq my/org-roam--current-slug slug)
+
+    (make-directory logs-dir t)
+    (expand-file-name (concat date ".org") logs-dir)))
+
+;; NOTE: these are needed since I can't figure out how to store vars
+;; in the 'org-roam-capture--info' list
+(defun my/org-roam-current-project (node)
+  my/org-roam--current-project)
+
+(defun my/org-roam-current-slug (node)
+  my/org-roam--current-slug)
+
+#+end_src
+
+Then we can add it to the =org-roam-capture-templates= list
+
+#+begin_src emacs-lisp
+(after! org-roam
+  (add-to-list 'org-roam-capture-templates ;; add project prefix
+               '("p" "Project"))
+  (add-to-list 'org-roam-capture-templates
+   '("pl" "Project log" entry
+     "\n* %<%H:%M>\n\n%?"
+     :target
+     (file+head "${my/org-roam-project-log-path}"
+                "#+TITLE: %<%Y-%-m-%-d> ${my/org-roam-current-project} log\n#+FILETAGS: :devlog:project:${my/org-roam-current-slug}:\n\n")
+     :empty-lines 1)))
+
+#+end_src
+
+Lastly we define a capture for inserting new tasks for a selected project, following most of the same steps as the log capture above.
+
+We define the function
+
+#+begin_src emacs-lisp
+(defun my/org-roam-project-task-path (node)
+  (let* ((project
+          (completing-read
+           "Project: "
+           (directory-files
+            (expand-file-name "Projects/" org-roam-directory)
+            nil "^[^.]")))
+         (project-dir (concat (expand-file-name "Projects/" org-roam-directory) project))
+         (slug (my/slugify project)))
+
+    (setq my/org-roam--current-project project)
+    (setq my/org-roam--current-slug slug)
+
+    (expand-file-name "tasks.org" project-dir)))
+
+#+end_src
+
+and then add a capture template
+
+#+begin_src emacs-lisp
+(after! org-roam
+  (add-to-list
+   'org-roam-capture-templates
+   '("pt" "Project task" entry
+     "* TODO %?"
+     :target
+     (file+head "${my/org-roam-project-task-path}"
+                "#+TITLE: ${my/org-roam-current-project} Tasks\n#+FILETAGS: :tasks:project:${my/org-roam-current-slug}:\n\n")
+     :empty-lines 1)))
+
+#+end_src
+
+**** Learning
+
+
+
+*** Agenda
+
+Next we'll setup the agendas. We'll start by installing the [[github:rougier/nano-agenda][nano-agenda]] and [[github:alphapapa/org-super-agenda][super-agenda]] packages using [[file:packages.el][packages.el]]
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! nano-agenda
+  :recipe (:type git
+           :host github
+           :repo "rougier/nano-agenda"
+           :branch "rewrite"))
+
+(package! org-super-agenda)
+
+#+end_src
+
+Then we can configure them, starting with nano-agenda
+
+#+begin_src emacs-lisp
+(use-package! nano-agenda
+  :after org
+  :config
+  (setq nano-agenda-header-show nil)) ;; we set our own in the 'UI -> Modeline' section
+
+#+end_src
+
+And moving onto super-agenda
+
+#+begin_src emacs-lisp
+(use-package! org-super-agenda
+  :after org
+  :config
+  (org-super-agenda-mode))
+
+#+end_src
+
+We'll also need to set the =org-agenda-files=. I set it to the entire directory recursively due to the way my layout is setup.
+
+#+begin_src emacs-lisp
+(setq org-agenda-files
+      (directory-files-recursively "~/org" "\\.org$"))
+
+#+end_src
 
 ** Vterm Tweaks :HOOK:BINDING:
 
@@ -1165,17 +1377,6 @@ Next we'll focus on the behavior of vterm. Thanks to the keybindings later, I ne
 #+begin_src emacs-lisp
 (add-hook 'vterm-mode-hook (lambda ()
                              (evil-collection-vterm-toggle-send-escape)))
-
-#+end_src
-
-I also use =nushell= so we'll set that as the default shell
-
-#+BEGIN_QUOTE
-   If you use a different shell (like zsh) you'll need to replace that here
-#+END_QUOTE
-
-#+begin_src emacs-lisp
-;; (setq vterm-shell "/bin/nu")
 
 #+end_src
 
