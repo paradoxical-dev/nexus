@@ -25,8 +25,26 @@ To open up the config file with =config-mode= enabled, use the shortcut =<leader
 
 Additionally, if at any point you add or remove a heading you can use the binding =U= while within the sidebar buffer to update the list.
 
-
 * Core
+
+** Profiler
+
+To gauge the performance of the config, we use a custom function throughout the document to measure how much time each section takes, and profile which ones need attention if startup time spikes.
+
+Each major header (Core, UI, Editor) will invoke the timer at the top level and also contain a 'Benchmark' section, where we report the time to the messages buffer.
+
+#+begin_src emacs-lisp
+(defvar my/init-start-time (current-time) "Time when init.el was started")
+(defvar my/section-start-time (current-time) "Time when section was started")
+(defun my/report-time (section)
+  (message "%-36s %.2fs"
+           (concat section " " "section time: ")
+           (float-time (time-subtract (current-time) my/section-start-time))))
+(message "---------------------------------------------------------------")
+
+(setq my/section-start-time (current-time))
+
+#+end_src
 
 ** Secrets
 
@@ -69,7 +87,6 @@ There are a few UI based nano packages that need to be installed first. We'll de
   :recipe (:host github :repo "rougier/svg-tag-mode"))
 
 #+end_src
-
 
 ** Config
 
@@ -299,17 +316,25 @@ This provide the my/org-imenu-filter that allows us to filter thw sidebar entrie
 #+END_QUOTE
 
 #+begin_src emacs-lisp
-(require 'org)
-(require 'svg-tag-mode)
+;; (require 'org)
+;; (require 'svg-tag-mode)
 
 (defvar my/org-imenu-filter-history
   '("BINDING" "HOOK" "ADVICE" "FACE" "MODE" "DEFER" "TODO"
     "PERSONAL" "INACTIVE" "BUGFIX" "OTHER" "TIMER" "OS")
   "Filter history list.")
 
-(defvar my/org-imenu-filter-function
-  (cdr (org-make-tags-matcher "*"))
+;; (defvar my/org-imenu-filter-function
+;;   (cdr (org-make-tags-matcher "*"))
+;;   "Filter function to decide if a headline is kept")
+(defvar my/org-imenu-filter-function nil
   "Filter function to decide if a headline is kept")
+;; Initialize it only when first needed
+(defun my/org-imenu-filter-function-get ()
+  (unless my/org-imenu-filter-function
+    (setq my/org-imenu-filter-function
+          (cdr (org-make-tags-matcher "*"))))
+  my/org-imenu-filter-function)
 
 (defun my/org-imenu-filter ()
   "Define and apply a new filter"
@@ -348,7 +373,7 @@ This provide the my/org-imenu-filter that allows us to filter thw sidebar entrie
                           (org-get-tags)))
                 (match (save-excursion
                          (goto-char begin)
-                         (funcall my/org-imenu-filter-function
+                         (funcall (my/org-imenu-filter-function-get)
                                   nil (org-get-tags) level)))
 
                 (title (org-element-property :raw-value element))
@@ -380,7 +405,6 @@ This provide the my/org-imenu-filter that allows us to filter thw sidebar entrie
 (advice-add #'org-imenu-get-tree :override #'my/org-imenu-filter-tree)
 
 #+end_src
-
 
 *** Config mode :BINDING:
 
@@ -444,6 +468,7 @@ The minor mode for configuration
             map)
 
   (require 'org)
+  (require 'svg-tag-mode)
   (if my/config-mode
       (my/org-sidebar)))
 
@@ -467,7 +492,6 @@ And lastly, define a shortcut function to open this file with config mode enable
 ;;; =========================== END CONFIG MODE ===========================
 #+end_src
 
-
 ** Terminal
 
 Within *Nexus*, terminal usage is just as important as the GUI.
@@ -484,9 +508,21 @@ First, we enable mouse usage in the terminal
 
 #+end_src
 
+** Benchmark
+
+#+begin_src emacs-lisp
+(my/report-time "Core")
+
+#+end_src
+
 * UI
 
-Much of the UI tweaks are inspired by [[github:rougier/nano-emacs][nano emacs]]. Simple, although not to the extreme of nano, and cohesive layouts with minimal color pallettes.
+Most of the UI tweaks have been inspired by [[github:rougier/nano-emacs][nano emacs]]. Simple, although not to the extreme of nano, and cohesive layouts with minimal color palettes.
+
+#+begin_src emacs-lisp
+(setq my/section-start-time (current-time))
+
+#+end_src
 
 ** Font
 
@@ -657,7 +693,6 @@ We can then define some hooks for enabling the modeline
 
 #+end_src
 
-
 *** Org Mode
 
 Org mode needs a special tweak for its modeline. This is because we enable =olivetti-mode= for centering org buffers.
@@ -697,7 +732,6 @@ FACE can be given to be used for the prefix and the suffix."
                     (propertize " " 'display (nano-modeline-align-to 'right 'window) 'face face))))))
 
 #+end_src
-
 
 ** Markdown Rendering
 
@@ -904,8 +938,19 @@ Then we hook that into =markdown-mode=
 
 #+end_src
 
+** Benchmark
+
+#+begin_src emacs-lisp
+(my/report-time "UI")
+
+#+end_src
 
 * Editor
+
+#+begin_src emacs-lisp
+(setq my/section-start-time (current-time))
+
+#+end_src
 
 ** Dired Replacement :BINDING:
 
@@ -1005,7 +1050,7 @@ And include the =org-roam-ui= package into [[file:packages.el][packages.el]]
 
 #+begin_src emacs-lisp
 (use-package! org-roam-ui
-  :after org-roam
+  :commands (org-roam-ui-open org-roam-ui-mode)
   :config
   (setq org-roam-ui-sync-theme t
         org-roam-ui-follow t
@@ -1187,8 +1232,9 @@ Then configuring it to activate on hypr files, and adding it to our tree-sitter 
 
 (add-hook 'find-file-hook #'my-hyprlang-detect)
 
-(add-to-list 'treesit-language-source-alist
-             '(hyprlang "https://github.com/tree-sitter-grammars/tree-sitter-hyprlang"))
+(after! treesit
+  (add-to-list 'treesit-language-source-alist
+               '(hyprlang "https://github.com/tree-sitter-grammars/tree-sitter-hyprlang")))
 
 #+end_src
 
@@ -1214,7 +1260,6 @@ To use the community LSP for hyprland config files, hyprls, we have to add it to
   (add-hook 'hyprlang-ts-mode-hook #'lsp-deferred))
 
 #+end_src
-
 
 *** SQL
 
@@ -1265,8 +1310,6 @@ On top of that, a custom function to suppress org-element warnings from within t
 
 #+end_src
 
-
-
 ** Mu4e
 
 I use mu4e extensively. So it's a no brainer we configure it. The address used should be set within the =secrets.el= file discussed in the earlier =Core -> Secrets= section.
@@ -1279,6 +1322,15 @@ We start by installing the [[github:rougier/mu4e-dashboard][mu4e-dashboard]] pac
 (package! mu4e-dashboard
   :recipe (:host github
            :repo "rougier/mu4e-dashboard"))
+
+#+end_src
+
+And configuring to lazy load for better performance
+
+#+begin_src emacs-lisp
+(use-package! mu4e
+  :defer t)
+  ;; :commands (=mu4e))
 
 #+end_src
 
@@ -1324,6 +1376,7 @@ Next we need to set the path to the [[file:mu4e-sidebar.org][dashboard file]], a
 
 #+begin_src emacs-lisp
 (use-package! mu4e-dashboard
+  :after mu4e
   :config
   (add-hook 'mu4e-dashboard-mode-hook #'my/mu4e-dashboard-setup)
   (add-hook 'mu4e-dashboard-mode-hook (lambda () (diff-hl-mode 0)))
@@ -1390,7 +1443,6 @@ Then, setup a default layout for automated window placement
 
 #+end_src
 
-
 ** Debugger 
 
 *** Base :BINDING:
@@ -1456,7 +1508,6 @@ And define some base keybindings before going into debugger specific configurati
         "dc" #'dap-continue))
 
 #+end_src
-
 
 *** cpp-tools :HOOK:
 
