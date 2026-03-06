@@ -1550,15 +1550,6 @@ We start by installing the [[github:rougier/mu4e-dashboard][mu4e-dashboard]] pac
 
 #+end_src
 
-And configuring to lazy load for better performance
-
-#+begin_src emacs-lisp
-(use-package! mu4e
-  :defer t)
-  ;; :commands (=mu4e))
-
-#+end_src
-
 We also need to set some custom options to make links play nice. We define some helper functions which force links in the dashboard file to open within an existing instance of the headers buffer.
 
 #+begin_src emacs-lisp 
@@ -1613,18 +1604,7 @@ Next we need to set the path to the [[file:mu4e-sidebar.org][dashboard file]], a
 
 *** UI :HOOK:
 
-The UI changes are pretty minimal. We need to first disable any line numbers while in =mu4e-mode=
-
-#+begin_src emacs-lisp
-(after! mu4e
-  (add-hook 'mu4e-main-mode-hook (lambda () (display-line-numbers-mode 0)))
-  (add-hook 'mu4e-headers-mode-hook (lambda () (display-line-numbers-mode 0)))
-  (add-hook 'mu4e-view-mode-hook (lambda () (display-line-numbers-mode 0)))
-  (add-hook 'mu4e-compose-mode-hook (lambda () (display-line-numbers-mode 0))))
-
-#+end_src
-
-We also need to add the headerline using =nano-modeline=
+The UI changes are pretty minimal. We need to first add the headerline using =nano-modeline=
 
 #+begin_src emacs-lisp
 ;; special case for headers-mode
@@ -1654,6 +1634,7 @@ Then, setup a default layout for automated window placement
   (interactive)
   (delete-other-windows)
   (mu4e t)
+  (require 'mu4e-dashboard)
   (mu4e-headers-search my/mu4e-default-query)
   (let* ((headers-window (selected-window))
          (sidebar-window (split-window headers-window nil 'left)))
@@ -1760,7 +1741,7 @@ Its /extremely/ useful in my workflow and helps extend things like:
 - Simple web browsing
 - Viewing .mp4 files
 
-And more. To install you'll need to follow the [[https:github.com/emacs-eaf/emacs-application-framework?tab=readme-ov-file#install][instructions from the repository]] as building with straight is not recommended.
+And more. To install you'll need to follow the [[https://github.com/emacs-eaf/emacs-application-framework?tab=readme-ov-file#install][instructions from the repository]] as building with straight is not recommended.
 
 After installing, we can set the load path and require the desired package(s) with =use-package=
 
@@ -1781,7 +1762,6 @@ After installing, we can set the load path and require the desired package(s) wi
 (use-package! eaf
   :load-path "~/src/emacs-eaf"  ;; XXX: change to repo location
   :defer 0
-  ;; :commands (eaf-open-browser eaf-open)
   :config
   (require 'eaf)
   (require 'eaf-browser)
@@ -1797,11 +1777,13 @@ After installing, we can set the load path and require the desired package(s) wi
   (setq eaf-webengine-fixed-font-family "JetBrainsMono Nerd Font Mono")
   
   (when (display-graphic-p) ;; default for links (when in gui)
-    (setq browse-url-browser-function
-          (lambda (url &optional new-window) ;; conditionally set function based on mode
-            (if (derived-mode-p 'mu4e-view-mode)
-                (eaf-open-browser url)
-              (eaf-open-browser-other-window url)))))
+    (setq browse-url-browser-function 'eaf-open-browser-other-window)
+    ;; change for rendering html mail
+    (after! mu4e
+      (add-to-list 'mu4e-view-actions
+                   '("eaf browser" . (lambda (msg)
+                                       (let ((browse-url-browser-function 'eaf-open-browser))
+                                         (mu4e-action-view-in-browser msg)))) t)))
   
   (advice-remove 'find-file #'eaf--find-file-advisor)) ;; prevent auto open in eaf tool
 
