@@ -1525,9 +1525,72 @@ We'll require based on the mode. For cpp-tools we only focus on the base C/C++ m
 
 #+end_src
 
+** EAF
 
+[[github:emacs-eaf/emacs-application-framework][EAF]] (Emacs Application Framework) is an extensible framework for upgrading the graphical capabilities of emacs.
 
+Its /extremely/ useful in my workflow and helps extend things like:
 
-** Custom
+- HTML email rendering
+- Simple web browsing
+- Viewing .mp4 files
 
+And more. To install you'll need to follow the [[https:github.com/emacs-eaf/emacs-application-framework?tab=readme-ov-file#install][instructions from the repository]] as building with straight is not recommended.
 
+After installing, we can set the load path and require the desired package(s) with =use-package=
+
+#+BEGIN_QUOTE
+  Depending on where you clone the repo, you will need to change the
+   =load-path= variable or else it won't work. You may also need to
+   remove some of the required packages depending on what you chose
+   to install
+#+END_QUOTE
+
+#+begin_src emacs-lisp
+(defun my/close-eaf-window ()
+  "Kills current EAF process and closes its window"
+  (interactive)
+  (eaf-kill-process)
+  (delete-window))
+
+(use-package! eaf
+  :load-path "~/src/emacs-eaf"  ;; XXX: change to repo location
+  :defer 0
+  ;; :commands (eaf-open-browser eaf-open)
+  :config
+  (require 'eaf)
+  (require 'eaf-browser)
+  (require 'eaf-pdf-viewer)
+  (require 'eaf-map)
+  (require 'eaf-music-player)
+  
+  (define-key eaf-mode-map* (kbd "C-c q") #'my/close-eaf-window) ;; use 'C-c q' to quit eaf apps
+  (eaf-bind-key nil "C-w" eaf-browser-keybinding) ;; unbind 'C-w' for easy window switching
+
+  ;; set default fonts for apps
+  (setq eaf-webengine-font-family "JetBrainsMono Nerd Font Propo")
+  (setq eaf-webengine-fixed-font-family "JetBrainsMono Nerd Font Mono")
+  
+  (when (display-graphic-p) ;; default for links (when in gui)
+    (setq browse-url-browser-function
+          (lambda (url &optional new-window) ;; conditionally set function based on mode
+            (if (derived-mode-p 'mu4e-view-mode)
+                (eaf-open-browser url)
+              (eaf-open-browser-other-window url)))))
+  
+  (advice-remove 'find-file #'eaf--find-file-advisor)) ;; prevent auto open in eaf tool
+
+#+end_src
+
+** Benchmark
+
+#+begin_src emacs-lisp
+(my/report-time "Editor")
+
+#+end_src
+
+* Custom
+
+#+begin_src emacs-lisp
+
+#+end_src
