@@ -514,7 +514,12 @@ Here we can set the base nano theme
 #+begin_src emacs-lisp
 (setq doom-theme 'doom-tokyo-night)
 ;; (load-theme 'nano-dark t)
-;; (require 'nano-modeline)
+;; HACK: corfu complains about circular inheritance
+(after! doom-themes
+  (custom-theme-set-faces!
+   (or doom-theme 'user)
+   '(gnus-group-news-low :inherit default)
+   '(gnus-group-news-low-empty :inherit gnus-group-news-low)))
 
 #+end_src
 
