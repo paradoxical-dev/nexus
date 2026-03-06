@@ -985,7 +985,10 @@ Then we can configure it within [[file:config.el][config.el]]
   (dirvish-peek-mode)
   (dirvish-side-follow-mode)
 
-  ;; use 'exa' for previews
+  ;; bindings
+  (define-key dired-mode-map (kbd "a") #'dired-create-empty-file)
+
+  ;; use 'eza' for previews
   (dirvish-define-preview eza (file)
     "Use `eza' to generate directory preview."
     :require ("eza")
@@ -993,6 +996,11 @@ Then we can configure it within [[file:config.el][config.el]]
       `(shell . ("eza" "--color=always" "--icons=always"
                  "--group-directories-first" ,file))))
   (push 'eza dirvish-preview-dispatchers))
+
+;; keymaps
+(after! dirvish
+  (map! :map dirvish-mode-map
+        :n "a" #'dired-create-empty-file))
 
 #+end_src
 
@@ -1074,44 +1082,18 @@ Another handy tool I use is [[github:alphapapa/org-ql][org-ql]]. We'll install t
 
 #+end_src
 
-Next we'll setup the agendas. We'll start by installing the [[github:rougier/nano-agenda][nano-agenda]] and [[github:alphapapa/org-super-agenda][super-agenda]] packages using [[file:packages.el][packages.el]]
+#+begin_src emacs-lisp
+(use-package! orq-ql
+  :defer t)
+
+#+end_src
+
+Lastly, we need to package the =djvu= and =nov= packages for =org-noter=
 
 #+begin_src emacs-lisp :tangle "packages.el"
-(package! nano-agenda
-  :recipe (:type git
-           :host github
-           :repo "rougier/nano-agenda"
-           :branch "rewrite"))
+(package! djvu)
+(package! nov)
 
-(package! org-super-agenda)
-
-#+end_src
-
-Then we can configure them, starting with nano-agenda
-
-#+begin_src emacs-lisp
-(use-package! nano-agenda
-  :after org
-  :config
-  (setq nano-agenda-header-show nil)) ;; we set our own in the 'UI -> Modeline' section
-
-#+end_src
-
-And moving onto super-agenda
-
-#+begin_src emacs-lisp
-(use-package! org-super-agenda
-  :after org
-  :config
-  (org-super-agenda-mode))
-
-#+end_src
-
-We'll also need to set the =org-agenda-files=. I set it to the entire directory recursively due to the way my layout is setup.
-
-#+begin_src emacs-lisp
-(setq org-agenda-files
-      (directory-files-recursively "~/org" "\\.org$"))
 #+end_src
 
 
