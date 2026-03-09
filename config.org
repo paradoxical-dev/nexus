@@ -1663,6 +1663,73 @@ On top of that, a custom function to suppress org-element warnings from within t
 
 #+end_src
 
+*** Docsets :HOOK:
+
+Although not always necessary its nice to have offline documentation available when internet access is either unstable or not available.
+
+Doom includes an optional module for installing the =dash-docs= package which we can configure here.
+
+The first step is to include a list of docsets which are always installed.
+
+#+BEGIN_QUOTE
+   You may wish to edit this list to fit your needs
+#+END_QUOTE
+
+#+begin_src emacs-lisp
+(defvar my/dash-docsets
+  '("Python" "Go" "Rust" "C" "C++" "JavaScript"
+    "TypeScript" "R" "Qt" "SQLite" "PostgreSQL")
+  "Docsets to ensure are installed.")
+
+(defun my/dash-docs-ensure-installed ()
+  "Install any docsets from my/dash-docsets that aren't already present."
+  (interactive)
+  (require 'dash-docs)
+  (dolist (docset my/dash-docsets)
+    (let ((docset-path (expand-file-name
+                        (concat docset ".docset")
+                        dash-docs-docsets-path)))
+      (unless (file-directory-p docset-path)
+        (message "Installing docset: %s" docset)
+        (dash-docs-install-docset docset)))))
+
+#+end_src
+
+You can then run =M-x my/dash-docs-ensure-installed= within an emacs session to install all the required docs in one go.
+
+Next we conditionally activate docsets based on the mode
+
+#+begin_src emacs-lisp
+(defvar my/dash-mode-docsets
+  '((python-mode        . ("Python"))
+    (go-mode            . ("Go"))
+    (ess-r-mode         . ("R"))
+    (sql-mode           . ("SQLite PostgreSQL"))
+    (rust-mode          . ("Rust"))
+    (c-mode             . ("C" "C++"))
+    (c++-mode           . ("C++"))
+    (js-mode            . ("JavaScript"))
+    (typescript-mode    . ("TypeScript" "JavaScript")))
+  "Alist mapping major modes to their dash docsets.")
+
+(defun my/dash-set-docsets ()
+  "Set buffer-local docsets based on major mode."
+  (when-let ((docsets (alist-get major-mode my/dash-mode-docsets)))
+    (setq-local consult-dash-docsets docsets)))
+
+(add-hook 'prog-mode-hook #'my/dash-set-docsets)
+
+#+end_src
+
+Finally, we set the browser function to use =EAF= (setup later in the =Editor -> EAF= section). If you choose not to use =EAF= then you'll need to modify or remove this change (default is =eww=)
+
+#+begin_src emacs-lisp
+(after! dash-docs
+  (setq dash-docs-browser-func #'eaf-open-browser-other-window))
+
+#+end_src
+
+
 ** Mu4e
 
 I use mu4e extensively. So it's a no brainer we configure it. The address used should be set within the =secrets.el= file discussed in the earlier =Core -> Secrets= section.
