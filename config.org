@@ -1704,7 +1704,7 @@ Next we conditionally activate docsets based on the mode
   '((python-mode        . ("Python"))
     (go-mode            . ("Go"))
     (ess-r-mode         . ("R"))
-    (sql-mode           . ("SQLite PostgreSQL"))
+    (sql-mode           . ("SQLite" "PostgreSQL"))
     (rust-mode          . ("Rust"))
     (c-mode             . ("C" "C++"))
     (c++-mode           . ("C++"))
