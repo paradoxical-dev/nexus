@@ -549,13 +549,18 @@ Here we can set the base nano theme
 
 #+begin_src emacs-lisp
 (setq doom-theme 'doom-tokyo-night)
-;; (load-theme 'nano-dark t)
-;; HACK: corfu complains about circular inheritance
-(after! doom-themes
+(after! doom-themes ;; HACK: corfu complains about circular inheritance
   (custom-theme-set-faces!
    (or doom-theme 'user)
    '(gnus-group-news-low :inherit default)
    '(gnus-group-news-low-empty :inherit gnus-group-news-low)))
+
+;; (require 'nano-base-colors)
+;; (require 'nano-faces)
+;; (require 'nano-theme)
+;; 
+;; (nano-mode)
+;; (setq doom-theme 'nano-dark)
 
 #+end_src
 
@@ -1223,7 +1228,7 @@ Next, we need a way of quickly extending/creating the log files per project. We'
     (make-directory logs-dir t)
     (expand-file-name (concat date ".org") logs-dir)))
 
-;; NOTE: these are needed since I can't figure out how to store vars
+;; NOTE: needed since I can't figure out how to store vars
 ;; in the 'org-roam-capture--info' list
 (defun my/org-roam-current-project (node)
   my/org-roam--current-project)
@@ -1288,6 +1293,129 @@ and then add a capture template
 
 **** Learning
 
+When it comes to learning, I structure my note taking in a pipeline. The pipeline looks like this:
+
+1. Source notes
+   These will be in the =Source= directory and taken alongside the consumed media. They're named after the media as well (i.e =<Book Title.org>=) and will contain quick annotations over the main topics (often with links to the relevant information). These can also be taken on paper.
+   
+2. Refined notes
+   Placed within the =Refined= directory, these notes build off of the source notes. Taking the quick notes and transforming them into fleshed out ideas in your own words and segmenting out key ideas and important vocab words. They will also inherit the same name as the mentioned source note.
+
+3. Permanent notes
+   This is the final stage where the main ideas from the previous refined note(s) are put into their own concept. Each permanent note should be a single topic (i.e =Types of Data Modeling.org=). You should be able to explain the topic in a way simple enough for others to understand and paraphrase in a concise mannor. Although the note may be created from one refined note, it can also be extended with information from other notes; This is also where the linking of ideas and other topics comes in.
+
+Each subtopic will also contain its own MOC note (Map-Of-Content). Here we will query the permanent notes for nodes which contain the topics file tag.
+
+In total the structure of the directories will become:
+
+#+begin_src emacs-lisp :tangle no
+org
+├── Learning
+│   ├── Assets
+│   ├── MOC
+│   ├── Permanent
+│   ├── Refined
+│   ├── Source
+│   └── Vocab
+#+end_src
+
+Now we create captures for each type.
+
+#+begin_src emacs-lisp
+;; NOTE: these functions will be used to query for
+;; subject tags throughout the templates
+(defun my/org-roam-list-tags ()
+  "Return a list of all unique filetags used across org-roam files."
+  (mapcar #'car (org-roam-db-query
+                 [:select :distinct [tag]
+                  :from tags])))
+
+(defvar my/org-roam-current-tags
+  "Stores the last raw selected tags for capture")
+
+(defun my/org-roam-prompt-tags (node)
+  "Prompt for filetags with completion, returning colon-separated tags."
+  (let* ((input (completing-read "Subject tag: " (my/org-roam-list-tags)))
+         (tags (mapconcat #'identity (split-string input " " t) ":")))
+    (if (string-empty-p tags)
+        ""
+      (setq my/org-roam-current-tags input)
+      (concat tags ":"))))
+
+(defun my/org-roam-get-tags (node)
+    my/org-roam-current-tags)
+
+#+end_src
+
+#+begin_src emacs-lisp
+(after! org-roam
+  (add-to-list 'org-roam-capture-templates ;; set the learning prefix
+               '("l" "Learning"))
+  
+  (add-to-list 'org-roam-capture-templates
+               '("ls" "New source note" plain "%?"
+                 :target (file+head "Learning/Source/${slug}.org"
+                                    "#+TITLE: ${title}\n#+FILETAGS: :source:${my/org-roam-prompt-tags}")
+                 :unnarrowed t))
+  
+  (add-to-list 'org-roam-capture-templates
+               '("lr" "New refined note" plain "%?"
+                 :target (file+head "Learning/Refined/${slug}.org"
+                                    "#+TITLE: ${title}\n#+FILETAGS: :refined:${my/org-roam-prompt-tags}")
+                 :unnarrowed t))
+
+  (add-to-list 'org-roam-capture-templates
+               '("lp" "New permenant note" plain
+                 "#+TITLE: ${title}\n#+FILETAGS: :permanent:${my/org-roam-prompt-tags}\n\n%?\n\n*** Related Ideas\n\n\n*** Lit Notes\n\n"
+                 :target (file+head "Learning/Permanent/${slug}.org" "")
+                 :unnarrowed t))
+
+  (add-to-list 'org-roam-capture-templates
+               '("lv" "New vocab note" plain
+                 "#+TITLE: ${title}\n#+FILETAGS: :vocab:${my/org-roam-prompt-tags}\n\n* Definition\n\n%?\n\n* Examples\n\n"
+                 :target (file+head "Learning/Vocab/${slug}.org" "")
+                 :unnarrowed t)))
+
+#+end_src
+
+To generate the MOC files, we need to create a custom =dblock= function. It will query first for all notes with a permanent tag, then filter them so that they match all given tags.
+
+#+begin_src emacs-lisp
+(defun org-dblock-write:roam-moc (params)
+  "Query across permanent notes for given tag(s)"
+  (let* ((tags-input (plist-get params :tags))
+         (tags (split-string (format "%s" tags-input) " " t))
+         (all-tags (cons "permanent" tags))
+         (results (org-roam-db-query
+                   [:select [n:title n:file t:tag]
+                    :from tags t
+                    :join nodes n :on (= t:node-id n:id)
+                    :where (in t:tag $v1)]
+                   (apply #'vector all-tags)))
+         (grouped (seq-group-by #'car (mapcar (lambda (r) (list (cadr r) (car r) (caddr r))) results)))
+         (matched (cl-remove-if-not
+                   (lambda (group)
+                     (let ((node-tags (mapcar #'caddr (cdr group))))
+                       (cl-every (lambda (tag) (member tag node-tags)) all-tags)))
+                   grouped)))
+    (dolist (group matched)
+      (let ((file (caar (cdr group)))
+            (title (cadar (cdr group))))
+        (insert (format "- [[file:%s][%s]]\n" file title))))))
+
+#+end_src
+
+Then all we need is a simple capture to insert this block, which will be updated when entering the file.
+
+#+begin_src emacs-lisp
+(after! org-roam
+  (add-to-list 'org-roam-capture-templates
+               '("lm" "New MOC" plain
+                 "#+TITLE: ${title}\n#+FILETAGS: :MOC:${my/org-roam-prompt-tags}\n\n%?#+BEGIN: roam-moc :tags \"${my/org-roam-get-tags}\"\n#+END:"
+                 :target (file+head "Learning/MOC/${slug}.org" "")
+                 :unnarrowed t)))
+
+#+end_src
 
 
 *** Agenda
@@ -1646,6 +1774,13 @@ Then, setup a default layout for automated window placement
       (mu4e-dashboard-mode)
       (set-window-dedicated-p sidebar-window t))
     (select-window headers-window)))
+
+#+end_src
+
+And a custom binding for it
+
+#+begin_src emacs-lisp
+(map! :leader :desc "Mu4e Default Layout" "oM" #'my/mu4e-default-layout)
 
 #+end_src
 
