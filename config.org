@@ -531,6 +531,14 @@ The default font settings for the nano theme assume the Roboto font, which I per
 #+begin_src emacs-lisp
 (setq doom-font (font-spec :family "JetBrainsMono Nerd Font" :size 16))
 
+;; fix nerd icons
+(after! nerd-icons
+  (setq nerd-icons-font-family "JetBrainsMono Nerd Font")
+  (set-fontset-font t '(#xe000 . #xf8ff) "JetBrainsMono Nerd Font")
+  (set-fontset-font t '(#x23fb . #x23fe) "JetBrainsMono Nerd Font")
+  (set-fontset-font t '(#x2665 . #x2665) "JetBrainsMono Nerd Font")
+  (set-fontset-font t '#xf000 "JetBrainsMono Nerd Font"))
+
 ;; (setq nano-mono)
 
 #+end_src
@@ -1136,10 +1144,10 @@ To make project creation easier we first create a custom function to
 #+begin_src emacs-lisp
 ;; used to replace spaces and hypens in project name for file tag
 (defun my/slugify (s)
-   (replace-regexp-in-string
-    "[^a-zA-Z0-9]"
-    "_"
-    s))
+  (replace-regexp-in-string
+   "[^a-zA-Z0-9]"
+   "_"
+   s))
 
 (defun my/org-roam-create-project (name subject)
   "Create a new org project with NAME.
@@ -1157,10 +1165,10 @@ To make project creation easier we first create a custom function to
          (tasks-file (expand-file-name "tasks.org" project-dir))
          (slug-name (my/slugify name))
          (slug-subject (unless (string-empty-p subject)
-                (my/slugify subject)))
+                         (my/slugify subject)))
          (filetags (concat ":project:" slug-name ":"
-                  (when slug-subject
-                    (concat slug-subject ":")))))
+                           (when slug-subject
+                             (concat slug-subject ":")))))
 
     (make-directory logs-dir t)
 
@@ -1470,7 +1478,12 @@ We'll start by editing the window UI. First, we'll disable line numbers for the 
 #+begin_src emacs-lisp
 (add-hook 'vterm-mode-hook (lambda ()
                              (display-line-numbers-mode 0)
-                             (setq-local line-spacing 1)))
+                             (setq-local line-spacing 0)))
+
+;; (add-hook 'vterm-mode-hook (lambda ()
+;;                              (display-line-numbers-mode 0)
+;;                              (setq-local line-spacing 0)
+;;                              (face-remap-add-relative 'default :height 100)))
 
 #+end_src
 
@@ -1496,9 +1509,12 @@ Then, we can define some keymaps for working within the terminal
 
 #+begin_src emacs-lisp
 (after! vterm
-  ;; switching workspaces
-  (map! :map vterm-mode-map "C-c ," #'+workspace/switch-right)
-  (map! :map vterm-mode-map "C-c ." #'+workspace/switch-left))
+  ;; unbind M-<num> for switching workspaces
+  (dotimes (i 10)
+    (define-key vterm-mode-map (kbd (format "M-%d" i)) nil))
+  ;; remove C-h from keymap exceptions
+  (setq vterm-keymap-exceptions (delete "C-h" vterm-keymap-exceptions))
+  (define-key vterm-mode-map (kbd "C-h") #'vterm--self-insert))
 
 #+end_src
 
