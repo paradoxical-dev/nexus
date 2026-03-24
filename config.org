@@ -566,11 +566,12 @@ cp "$HOME/src/emacs-themes/rose-pine-doom-emacs/"*.el "$HOME/.config/doom/themes
 #+begin_src emacs-lisp
 (load! "current-theme")
 (after! doom-themes ;; HACK: corfu complains about circular inheritance
-  (add-hook 'doom-load-theme-hook (lambda ()
-                                    (custom-theme-set-faces!
-                                      (or doom-theme 'user)
-                                      '(gnus-group-news-low :inherit default)
-                                      '(gnus-group-news-low-empty :inherit gnus-group-news-low)))))
+  (add-hook 'enable-theme-functions
+          (lambda (_theme)
+            (custom-theme-set-faces!
+              (or doom-theme 'user)
+              '(gnus-group-news-low :inherit default)
+              '(gnus-group-news-low-empty :inherit gnus-group-news-low)))))
 
 #+end_src
 
