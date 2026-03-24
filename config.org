@@ -1683,7 +1683,7 @@ The first step is to include a list of docsets which are always installed.
 
 #+begin_src emacs-lisp
 (defvar my/dash-docsets
-  '("Python" "Go" "Rust" "C" "C++" "JavaScript"
+  '("Python" "Go" "Rust" "C" "C++" "JavaScript" "Bash" "Sass"
     "TypeScript" "R" "Qt" "SQLite" "PostgreSQL")
   "Docsets to ensure are installed.")
 
@@ -1706,6 +1706,7 @@ You can then run =M-x my/dash-docs-ensure-installed= within an emacs session to 
 Next we conditionally activate docsets based on the mode
 
 #+begin_src emacs-lisp
+;; TODO: need to update for ts modes
 (defvar my/dash-mode-docsets
   '((python-mode        . ("Python"))
     (go-mode            . ("Go"))
@@ -1731,7 +1732,8 @@ Finally, we set the browser function to use =EAF= (setup later in the =Editor ->
 
 #+begin_src emacs-lisp
 (after! dash-docs
-  (setq dash-docs-browser-func #'eaf-open-browser-other-window))
+  (when (display-graphic-p)
+    (setq dash-docs-browser-func #'eaf-open-browser-other-window)))
 
 #+end_src
 
