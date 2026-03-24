@@ -1670,6 +1670,23 @@ On top of that, a custom function to suppress org-element warnings from within t
 
 #+end_src
 
+*** R
+
+Working within the R console specifically can be a bit annoying. We adjust that here.
+
+First step is to adjust the default popup size for the interactive R console
+
+#+begin_src emacs-lisp
+(after! ess
+  (set-popup-rule!
+    "\\*R:.*\\*"
+    :side 'bottom
+    :height 10
+    :select t
+    :quit nil))
+
+#+end_src
+
 *** Docsets :HOOK:
 
 Although not always necessary its nice to have offline documentation available when internet access is either unstable or not available.
