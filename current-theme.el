@@ -1,10 +1,16 @@
 ;;; current-theme.el --- Sets the currently selected theme -*- lexical-binding: t; -*-
 
 ;;
+;; NORD
+;;
+
+(setq doom-theme 'doom-nord)
+
+;;
 ;; ROSE PINE
 ;;
 
-(setq doom-theme 'doom-everforest)
+;; (setq doom-theme 'doom-everforest)
 
 ;;
 ;; NANO

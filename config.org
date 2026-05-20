@@ -668,9 +668,18 @@ It also has a nice API for creating new formats, or editing existing ones (altho
 
 First, we'll add a hook to load nano-modeline. This will have to happen after the theme has been loaded for the faces to be represented accurately. Then we need to conceal the default modeline for every buffer.
 
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! hide-mode-line)
+
+#+end_src
+
 #+begin_src emacs-lisp
 (add-hook 'doom-load-theme-hook (lambda () (require 'nano-modeline)))
-(global-hide-mode-line-mode 1)
+(use-package! hide-mode-line
+  :config
+  (global-hide-mode-line-mode 1))
+
+;; (global-hide-mode-line-mode 1)
 ;; (add-hook 'after-change-major-mode-hook (lambda () (hide-mode-line-mode 1)))
 
 #+end_src
@@ -1117,7 +1126,7 @@ Then configure it to a fixed width and hook it into org-mode. However, we don't 
   (org-mode . my/org-enable-olivetti)
   (nano-agenda-mode . olivetti-mode)
   :config
-  (setq olivetti-body-width 75))
+  (setq olivetti-body-width 85))
 
 #+end_src
 
@@ -1687,6 +1696,35 @@ First step is to adjust the default popup size for the interactive R console
 
 #+end_src
 
+*** Nix (nixd)
+
+Since I use [[https:nixos.org/][NixOS]], we'll need to setup a nix language server. DOOM's init file option for nix only supports the [[github:oxalica/nil][nil]] language server, so instead we need to manually setup [[github:nix-community/nixd/tree/main][nixd]]
+
+#+begin_quote
+  󰌶 If you install this repo without using Nix, you can choose to disable
+    this module or remove it entirely, along with the Custom -> NixOS module.
+#+end_quote
+
+
+#+begin_src emacs-lisp
+(after! lsp-mode
+  (setq lsp-nix-nixd-server-path "nixd"
+        lsp-nix-nixd-nixpkgs-expr "import <nixpkgs> {}"
+        lsp-nix-nixd-formatting-command ["nixfmt"])
+
+  ;; disable nil
+  (add-to-list 'lsp-disabled-clients 'nix-nil)
+
+  ;; register nixd for nix-ts-mode since lsp-mode only does nix-mode by default
+  (with-eval-after-load 'lsp-nix
+    (lsp-register-client
+     (make-lsp-client
+      :new-connection (lsp-stdio-connection "nixd")
+      :major-modes '(nix-mode nix-ts-mode)
+      :server-id 'nixd-lsp
+      :priority 10))))
+#+end_src
+
 *** Docsets :HOOK:
 
 Although not always necessary its nice to have offline documentation available when internet access is either unstable or not available.
@@ -1749,9 +1787,9 @@ Next we conditionally activate docsets based on the mode
 Finally, we set the browser function to use =EAF= (setup later in the =Editor -> EAF= section). If you choose not to use =EAF= then you'll need to modify or remove this change (default is =eww=)
 
 #+begin_src emacs-lisp
-(after! dash-docs
-  (when (display-graphic-p)
-    (setq dash-docs-browser-func #'eaf-open-browser-other-window)))
+;; (after! dash-docs
+;;   (when (display-graphic-p)
+;;     (setq dash-docs-browser-func #'eaf-open-browser-other-window)))
 
 #+end_src
 
@@ -1846,7 +1884,7 @@ The UI changes are pretty minimal. We need to first add the headerline using =na
 Then, setup a default layout for automated window placement
 
 #+begin_src emacs-lisp
-;; change if necessary
+;; XXX: change if necessary
 (defvar my/mu4e-default-query "m:/gmail/inbox"
   "Default mu4e search query used when opening mu4e.")
 
@@ -1959,6 +1997,27 @@ We'll require based on the mode. For cpp-tools we only focus on the base C/C++ m
 
 #+end_src
 
+** envrc
+
+The [[github:purcell/envrc][envrc]] package allows us to integrate [[https:direnv.net/][direnv]] and its features into emacs. Simply opening a file from a project containing a =.envrc= file activates the environment for interaction in the buffer.
+
+This is especially useful when working on projects using a nix shell.
+
+First we need to add it to our [[file:packages.el][packages.el]] file
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! envrc)
+
+#+end_src
+
+Then configure it
+
+#+begin_src emacs-lisp
+(use-package! envrc
+  :hook (after-init . envrc-global-mode))
+
+#+end_src
+
 ** EAF
 
 [[github:emacs-eaf/emacs-application-framework][EAF]] (Emacs Application Framework) is an extensible framework for upgrading the graphical capabilities of emacs.
@@ -1988,14 +2047,14 @@ After installing, we can set the load path and require the desired package(s) wi
   (delete-window))
 
 (use-package! eaf
-  :load-path "~/src/emacs-eaf"  ;; XXX: change to repo location
+  ;; :load-path "~/src/emacs-eaf"  ;; XXX: change to repo location if built from source
   :defer 0
   :config
   (require 'eaf)
   (require 'eaf-browser)
-  (require 'eaf-pdf-viewer)
-  (require 'eaf-map)
-  (require 'eaf-music-player)
+  ;; (require 'eaf-pdf-viewer)
+  ;; (require 'eaf-map)
+  ;; (require 'eaf-music-player)
   
   (define-key eaf-mode-map* (kbd "C-c q") #'my/close-eaf-window) ;; use 'C-c q' to quit eaf apps
   (eaf-bind-key nil "C-w" eaf-browser-keybinding) ;; unbind 'C-w' for easy window switching
@@ -2005,7 +2064,7 @@ After installing, we can set the load path and require the desired package(s) wi
   (setq eaf-webengine-fixed-font-family "JetBrainsMono Nerd Font Mono")
   
   (when (display-graphic-p) ;; default for links (when in gui)
-    (setq browse-url-browser-function 'eaf-open-browser-other-window)
+    ;; (setq browse-url-browser-function 'eaf-open-browser-other-window)
     ;; change for rendering html mail
     (after! mu4e
       (add-to-list 'mu4e-view-actions
@@ -2028,6 +2087,17 @@ After installing, we can set the load path and require the desired package(s) wi
 
 #+begin_src emacs-lisp
 (setq my/section-start-time (current-time))
+
+#+end_src
+
+** NixOS
+
+The following are NixOS specific tweaks. Feel free to remove this section entirely if not using NixOS. If curious, [[github:paradoxical-dev/nixos-config][this]] is my personal nixos-config repo.
+
+Firstly we prefer mu4e builtin rather than building it from source since emacs is built with it.
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! mu4e :built-in 'prefer)
 
 #+end_src
 
