@@ -508,6 +508,22 @@ First, we enable mouse usage in the terminal
 
 #+end_src
 
+** Daemon Fixes
+
+When emacs is ran through a client of the daemon, there are a few things which needed fixed when loading a new client (at least on my end).
+
+Firstly, each new client was loaded with some weird defaults to the frame. We fix those here
+
+#+begin_src emacs-lisp
+(defun my/fix-client-frame (frame)
+  "Re-apply all frame-sensitive settings for emacsclient frames."
+  (with-selected-frame frame
+    (scroll-bar-mode -1)))
+
+(add-hook 'after-make-frame-functions #'my/fix-client-frame)
+
+#+end_src
+
 ** Benchmark
 
 #+begin_src emacs-lisp
@@ -687,14 +703,13 @@ First, we'll add a hook to load nano-modeline. This will have to happen after th
 We can then define some hooks for enabling the modeline
 
 #+begin_src emacs-lisp
-;; (add-hook! org-mode #'nano-modeline)
-
-(add-hook! prog-mode #'nano-modeline)
-(add-hook! text-mode #'nano-modeline)
-(add-hook! messages-buffer-mode #'nano-modeline)
-(add-hook 'vterm-mode-hook (lambda ()              ;; special modes require their format
-                             (nano-modeline
-                              nano-modeline-format-terminal 'header)))
+(add-hook! prog-mode (when (fboundp 'nano-modeline) (nano-modeline)))
+(add-hook! text-mode (when (fboundp 'nano-modeline) (nano-modeline)))
+(add-hook! messages-buffer-mode (when (fboundp 'nano-modeline) (nano-modeline)))
+(add-hook 'vterm-mode-hook
+          (lambda ()
+            (when (fboundp 'nano-modeline)
+              (nano-modeline nano-modeline-format-terminal 'header))))
 
 #+end_src
 
@@ -704,7 +719,7 @@ Org mode needs a special tweak for its modeline. This is because we enable =oliv
 
 Nano modeline describes a function =nano-modeline-padding-to= which applies the padding for the alignment of the modeline. However, we need to patch it so that it applies the default face to *both* sides of padding. Otherwise, the background will overflow into the padding of the buffers.
 
-Since its just a small change, I chose to patch the function rather than create a personal fork or pull request.
+Since its just a small change, I chose to patch the function rather than create a personal fork or pull request, as it seems to not be actively maintained.
 
 #+begin_src emacs-lisp
 (after! nano-modeline
