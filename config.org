@@ -517,6 +517,10 @@ Firstly, each new client was loaded with some weird defaults to the frame. We fi
 #+begin_src emacs-lisp
 (defun my/fix-client-frame (frame)
   "Re-apply all frame-sensitive settings for emacsclient frames."
+  
+  (define-key key-translation-map (kbd "C-e") (kbd "<f20>"))
+  (map! :g "<f20>" #'+vterm/toggle)
+  
   (with-selected-frame frame
     (scroll-bar-mode -1)))
 
@@ -1756,6 +1760,7 @@ Since I use [[https:nixos.org/][NixOS]], we'll need to setup a nix language serv
       :major-modes '(nix-mode nix-ts-mode)
       :server-id 'nixd-lsp
       :priority 10))))
+
 #+end_src
 
 *** Docsets :HOOK:
