@@ -2160,6 +2160,14 @@ Firstly we prefer mu4e builtin rather than building it from source since emacs i
 
 #+end_src
 
+TEST
+#+begin_src emacs-lisp
+(setq default-frame-alist '((undecorated . t)))
+(add-to-list 'default-frame-alist '(drag-internal-border . 1))
+(add-to-list 'default-frame-alist '(internal-border-width . 5))
+
+#+end_src
+
 ** Btop Posframe
 
 Here we create a toggleable btop instance inside a posframe. I've tried other system monitor tools more native to emacs but nothing comes close to btop. 
