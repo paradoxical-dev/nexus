@@ -1484,6 +1484,24 @@ We'll also need to set the =org-agenda-files=. I set it to the entire directory 
 
 #+end_src
 
+Lastly, we setup the [[github:https:emacsmirror/org-gcal][org-gcal]] package. This package allows us to sync agenda entries to and from google calander.
+
+Doom provides a module in =:app calender= to install the package, all we need to do is configure it. Setting it up takes some more involved steps that can't be automated. To do so, check the repo linked above.
+
+Additionally, this requires some sensitive information and most variables should be declared within your secrets.el file (see =Core -> Secrets= for more information).
+
+Here, we'll do a few things to make the integration even better. We set the default alert style to use =libnotify= and define a keybinding for quickly opening the calander file.
+
+#+begin_src emacs-lisp
+(after! org
+  (setq alert-default-style 'libnotify)
+  (map! :leader
+        ;; NOTE: you may need to change this depending on file
+        :n "nx" (cmd! (find-file "~/org/calendar.org"))
+        :desc "Open the calender note"))
+
+#+end_src
+
 ** Vterm Tweaks :HOOK:BINDING:
 
 Here we make some configuration tweaks to vterm windows and its behavior.
