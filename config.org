@@ -1615,6 +1615,27 @@ Since this is less likely to be used as much, we can globally bind it to a =C-c=
 
 3. UI - The =lsp-ui= package makes browsing definitions and references much prettier
 
+*** UI :BINDING:
+
+There are a few =lsp-ui= specific features that need to be tweaked. First, is to override the default =K= mapping (which maps to =+lookup/documentation=) to use =lsp-ui-doc-glance=. We'll then remap the lookup function to use =<leader>K=
+
+#+begin_src emacs-lisp
+(after! lsp-ui
+  (setq lsp-ui-doc-position 'at-point ;; floating window
+        lsp-ui-doc-border (face-background 'default)
+        lsp-ui-doc-max-height 20))
+
+(map! :after lsp-ui
+      :map general-override-mode-map
+      :n "K" #'lsp-ui-doc-glance
+      :n "C-k" #'lsp-ui-doc-focus-frame)
+
+(map! :leader
+      :desc "Documentation lookup"
+      "K" #'+lookup/documentation)
+
+#+end_src
+
 *** Hyprlang :HOOK:
 
 Hyprland's config language isn't outright supported by most packages, so we'll have to manually add all of the behavior.
