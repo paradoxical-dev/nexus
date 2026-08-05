@@ -2154,21 +2154,46 @@ Then we can configure them, starting with nano-agenda
 
 #+end_src
 
-And moving onto super-agenda
+And moving onto super-agenda, make sure to alter the agenda groups to fit your workflow
 
 #+begin_src emacs-lisp
 (use-package! org-super-agenda
   :after org
   :config
-  (org-super-agenda-mode))
+  (org-super-agenda-mode)
+  (setq org-super-agenda-groups
+        '((:name "Today"
+           :time-grid t
+           :date today
+           :scheduled today)
+          (:name "Projects"
+           :tag "project"
+           :order 2)
+          (:name "Personal"
+           :tag "personal"
+           :order 3)
+          (:name "Goals"
+           :category "Goals"
+           :order 4)
+          (:name "Overdue"
+           :deadline past
+           :order 1)
+          (:discard (:tag "reference"))))) 
 
 #+end_src
 
-We'll also need to set the =org-agenda-files=. I set it to the entire directory recursively due to the way my layout is setup.
+We'll also need to set the =org-agenda-files=. You will need to tweak this in order to match your workflow.
 
 #+begin_src emacs-lisp
+;; (setq org-agenda-files
+;;       (directory-files-recursively "~/org" "\\.org$"))
+
 (setq org-agenda-files
-      (directory-files-recursively "~/org" "\\.org$"))
+      (append
+       '("~/org/calendar.org")
+       (directory-files-recursively "~/org/Personal/Goals/" "\\.org$")
+       (directory-files-recursively "~/org/Projects/" "\\.org$")
+       (directory-files-recursively "~/org/Journal/" "\\.org$")))
 
 #+end_src
 
@@ -2184,9 +2209,9 @@ Here, we'll do a few things to make the integration even better. We set the defa
 (after! org
   (setq alert-default-style 'libnotify)
   (map! :leader
-        ;; NOTE: you may need to change this depending on file
-        :n "nx" (cmd! (find-file "~/org/calendar.org"))
-        :desc "Open the calender note"))
+        ;; NOTE: may need to change this depending on file location
+        :desc "Open the calender note"
+        :n "nx" (cmd! (find-file "~/org/calendar.org"))))
 
 #+end_src
 
