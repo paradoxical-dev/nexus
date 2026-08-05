@@ -2568,88 +2568,125 @@ I use mu4e extensively. So it's a no brainer we configure it. The address used s
 
 *** Dashboard
 
-We start by installing the [[github:rougier/mu4e-dashboard][mu4e-dashboard]] package into [[file:packages.el][packages.el]]
+We start by installing my custom package [[github:paradoxical-dev/mu4e-sidebar][mu4e-sidebar]] and the [[github:rougier/nano-mu4e][nano-mu4e]] package by Rougier
 
 #+begin_src emacs-lisp :tangle "packages.el"
-(package! mu4e-dashboard
+(package! mu4e-sidebar
   :recipe (:host github
-           :repo "rougier/mu4e-dashboard"))
+           :repo "paradoxical-dev/mu4e-sidebar"))
+
+(package! nano-mu4e
+  :recipe (:host github
+           :repo "rougier/nano-mu4e"))
 
 #+end_src
 
-We also need to set some custom options to make links play nice. We define some helper functions which force links in the dashboard file to open within an existing instance of the headers buffer.
-
-#+begin_src emacs-lisp 
-(defun my/mu4e-search-in-headers-window (query)
-  "Run mu4e QUERY in existing *mu4e-headers* window."
-  (interactive)
-  (let ((headers-win (get-buffer-window "*mu4e-headers*")))
-    (if headers-win
-        (with-selected-window headers-win
-          (mu4e-headers-search query))
-      ;; fallback if headers window doesn't exist
-      (mu4e-headers-search query))))
-
-(defun my/mu4e-dashboard-org-open-at-point (&rest _args)
-  "Handle RET on mu4e-dashboard links."
-  (let* ((link (org-element-lineage
-                (org-element-context)
-                '(link)
-                t)))
-    (when (and link
-               (string= (org-element-property :type link) "mu"))
-      (my/mu4e-search-in-headers-window
-       (org-element-property :path link))
-      t)))
-
-;; setup function to apply tweaks
-(defun my/mu4e-dashboard-setup ()
-  (interactive)
-  (setq-local org-return-follows-link nil)
-  (add-hook 'org-open-at-point-functions
-            #'my/mu4e-dashboard-org-open-at-point nil t))
-
-#+end_src
-
-Next we need to set the path to the [[file:mu4e-sidebar.org][dashboard file]], apply the link tweaks and keybindings
-
-#+begin_quote
-   If you wish to change the dashboard, you can find the docs in the [[github:rougier/mu4e-dashboard][repo]]
-#+end_quote
+Then we configure the UI elements of the package, leaving other variables to be defined per mu4e context. See the linked repo for more information.
 
 #+begin_src emacs-lisp
-(use-package! mu4e-dashboard
+(use-package! mu4e-sidebar
   :after mu4e
   :config
-  (add-hook 'mu4e-dashboard-mode-hook #'my/mu4e-dashboard-setup)
-  (add-hook 'mu4e-dashboard-mode-hook (lambda () (diff-hl-mode 0)))
-  (setq mu4e-dashboard-file (expand-file-name "mu4e-sidebar.org" doom-user-dir))
-  :defer 0)
+  (setq mu4e-sidebar-width 45
+        mu4e-sidebar-side 'left)
+  
+  (add-hook 'mu4e-sidebar-mode-hook (lambda () ;; TODO: move hook?
+                                      (nano-modeline nano-modeline-format-mu4e-sidebar 'header))))
 
 #+end_src
 
+Also defining a custom nano-modeline format for the buffer, including a custom element mirroring the existing =nano-modeline-element-buffer-status=. Additionally, we include two other custom elements for retrieving the current context and total mail.
+
+#+begin_src emacs-lisp
+(defun nano-modeline-element-mu4e-icon (&optional face raise)
+  "Icon element for mu4e, styled like `nano-modeline-element-buffer-status'."
+  (let* ((raise  (or raise nano-modeline-padding))
+         (face   (or face 'nano-modeline-face-buffer-read-write))
+         (symbol (my/nano-icon "" 3 8)))
+    (propertize (concat
+                 (propertize " " 'display `(raise ,(car raise)))
+                 symbol
+                 (propertize " " 'display `(raise ,(- (cdr raise)))))
+                'face face)))
+
+(defun nano-modeline-element-mu4e-context ()
+  "Return the name of the current mu4e context, or \"none\"."
+  (let* ((context (mu4e-context-current))
+         (name    (if context (mu4e-context-name context) "none")))
+    (propertize (format "(%s)" name) 'face 'nano-modeline-face-buffer-mode)))
+
+(defun nano-modeline-element-mu4e-message-count ()
+  (let* ((props mu4e--server-props)
+         (count (plist-get props :doccount)))
+    (propertize (format "%s messages" (or count 0))
+                'face 'nano-modeline-face-buffer-mode)))
+
+(defcustom nano-modeline-format-mu4e-sidebar
+  (cons '(nano-modeline-element-mu4e-icon
+          nano-modeline-element-space
+          nano-modeline-element-space
+          "Mail"
+          nano-modeline-element-space
+          nano-modeline-element-mu4e-context)
+        '(nano-modeline-element-mu4e-message-count
+          nano-modeline-element-space))
+  "Mu4e sidebar format"
+  :type 'nano-modeline-type
+  :group 'nano-modeline-modes)
+
+#+end_src
 
 *** UI :HOOK:
 
-The UI changes are pretty minimal. We need to first add the headerline using =nano-modeline=
+The UI changes are pretty minimal and rely mostly on the =nano-mu4e= package.
 
 #+begin_src emacs-lisp
-;; special case for headers-mode
-;; (after! mu4e
-;;   (add-hook 'buffer-list-update-hook
-;;             (lambda ()
-;;               (when (derived-mode-p 'mu4e-headers-mode)
-;;                 (nano-modeline nano-modeline-format-mu4e-headers 'header)))))
-;; 
-;; (after! mu4e
-;;   (add-hook 'mu4e-view-mode-hook (lambda ()
-;;                                    (nano-modeline nano-modeline-format-mu4e-message 'header)))
-;;   (add-hook 'mu4e-compose-mode-hook (lambda ()
-;;                                    (nano-modeline nano-modeline-format-mu4e-headers 'header))))
+(use-package! nano-mu4e
+  :after mu4e
+  :config
+  (setq nano-mu4e-view-style 'boxed))
+
+(after! mu4e
+  ;; fixes face rendering issues
+  (add-hook 'mu4e-headers-mode-hook (lambda () (font-lock-mode -1)))
+  ;; remove line spacing for box chars
+  (add-hook 'mu4e-headers-mode-hook (lambda () (setq line-spacing 1)))
+  (add-hook 'mu4e-headers-mode-hook (lambda () (nano-mu4e-mode))))
 
 #+end_src
 
-Then, setup a default layout for automated window placement
+We also define a custom nano-modeline format for the headers view and a separate one for the message views. To create the headers view format, for this we'll use the custom defined element created in the earlier =UI= section.
+
+#+begin_src emacs-lisp
+;; TODO make custom modeline
+(defcustom nano-modeline-format-mu4e-headers
+  (cons '(nano-modeline-element-mu4e-icon
+          nano-modeline-element-space
+          nano-modeline-element-space
+          "Mail"
+          nano-modeline-element-space
+          nano-modeline-element-mu4e-context)
+        '(nano-modeline-element-mu4e-message-count
+          nano-modeline-element-space))
+  "Mu4e sidebar format"
+  :type 'nano-modeline-type
+  :group 'nano-modeline-modes)
+
+#+end_src
+
+The message view gets a more basic headerline for separation
+
+#+begin_src emacs-lisp
+(after! mu4e
+  (add-hook 'mu4e-view-mode-hook
+            (lambda ()
+              (face-remap-add-relative 'header-line 'default)
+              (setq header-line-format
+                    '(:eval (make-string (window-body-width) ?-))))))
+
+#+end_src
+
+Lastly, we can setup a default layout for automated window placement
 
 #+begin_src emacs-lisp
 ;; XXX: change if necessary
@@ -2801,10 +2838,9 @@ And more. To install you'll need to follow the [[https://github.com/emacs-eaf/em
 After installing, we can set the load path and require the desired package(s) with =use-package=
 
 #+BEGIN_QUOTE
-  Depending on where you clone the repo, you will need to change the
-   =load-path= variable or else it won't work. You may also need to
-   remove some of the required packages depending on what you chose
-   to install
+    Depending on where you clone the repo, you will need to change the
+     =load-path= variable or else it won't work. You may also need to remove some
+     of the required packages depending on what you chose to install
 #+END_QUOTE
 
 #+begin_src emacs-lisp
@@ -2866,14 +2902,6 @@ Firstly we prefer mu4e builtin rather than building it from source since emacs i
 
 #+begin_src emacs-lisp :tangle "packages.el"
 (package! mu4e :built-in 'prefer)
-
-#+end_src
-
-TEST
-#+begin_src emacs-lisp
-(setq default-frame-alist '((undecorated . t)))
-(add-to-list 'default-frame-alist '(drag-internal-border . 1))
-(add-to-list 'default-frame-alist '(internal-border-width . 5))
 
 #+end_src
 
