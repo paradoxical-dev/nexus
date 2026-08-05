@@ -89,6 +89,16 @@ There are a few UI based nano packages that need to be installed first. We'll de
 
 #+end_src
 
+We also require some base packages at startup
+
+#+begin_src emacs-lisp
+(use-package! svg-tag-mode
+  :defer 0
+  :config
+  (global-svg-tag-mode))
+
+#+end_src
+
 ** Config
 
 The main reason I chose a literate config for this was to mitigate the pain of configuring a large single file... by using a large single file.
@@ -119,7 +129,7 @@ And create a custom nano-modeline format rule for the sidebar. I basically just 
 (defcustom nano-modeline-format-config
   (cons '(nano-modeline-element-buffer-status
           nano-modeline-element-space
-          "config.el"
+          "config.org"
           nano-modeline-element-space
           "(outline)")
         '(nano-modeline-element-window-status
@@ -311,9 +321,9 @@ This provide the my/org-imenu-filter that allows us to filter thw sidebar entrie
 #+end_src
 
 #+BEGIN_QUOTE
-   If you end up changing the line-height (in the =UI -> Font= section)
-    you'll need to change the =:height= parameter in the =svg-tags= call of
-    the =my/org-imenu-filter-tree= to =1= for the tags to not look distorted
+    If you end up changing the line-height (in the =UI -> Font= section) you'll
+     need to change the =:height= parameter in the =svg-tags= call of the
+     =my/org-imenu-filter-tree= to =1= for the tags to not look distorted
 #+END_QUOTE
 
 #+begin_src emacs-lisp
@@ -627,7 +637,7 @@ Then we increase the gap between windows
 (setq window-divider-default-right-width 24)
 #+end_src
 
-We also need to change the face value for the gap between windows. However, we need to do this after the theme's set, so we'll need to add a hook function. This will have to happen after the solaire package is activated since it alters face colors.
+We also need to change the face value for the gap between windows. However, we need to do this after the theme's set, so we'll need to add a hook function. This will have to happen after the solaire package is activated since it also alters face colors.
 
 #+begin_src emacs-lisp
 (add-hook 'solaire-mode-hook
@@ -1176,9 +1186,25 @@ Here we just tweak the positioning and size of the posframe for vertico's comple
 #+begin_src emacs-lisp
 (use-package! vertico-posframe
   :config
-  (setq vertico-posframe-min-width 50
+  (setq vertico-posframe-border-width 8
+        vertico-posframe-parameters
+        '((left-fringe  . 16)
+          (right-fringe . 16)))
+  (custom-set-faces!
+    `(vertico-posframe-border :background ,(face-background 'solaire-default-face)))
+  (setq vertico-posframe-min-width 80
+        vertico-posframe-width 100
         vertico-posframe-min-height 15
-        vertico-posframe-poshandler #'posframe-poshandler-frame-top-center))
+        vertico-posframe-poshandler #'posframe-poshandler-frame-top-center)
+  
+    ;; TODO: Remove truncate sybmols
+    ;; (advice-add 'vertico-posframe--show :after
+    ;;           (lambda (&rest _)
+    ;;             (let ((buf (get-buffer " *Minibuf-1*")))
+    ;;               (when buf
+    ;;                 (with-current-buffer buf
+    ;;                   (setq-local fringe-indicator-alist nil))))))
+  )
 
 #+end_src
 
@@ -1201,8 +1227,58 @@ First, we'll add a hook to load nano-modeline. This will have to happen after th
   :config
   (global-hide-mode-line-mode 1))
 
-;; (global-hide-mode-line-mode 1)
-;; (add-hook 'after-change-major-mode-hook (lambda () (hide-mode-line-mode 1)))
+#+end_src
+
+Next, we can set some of the defaults for how the modeline appears on default buffers. Other special cases are handled within their respective sections
+
+#+begin_src emacs-lisp
+(after! nano-modeline
+  ;;; ICON CHANGES ;;;
+  
+  (defun my/nano-icon (char &optional left-pad right-pad)
+    "Return CHAR with LEFT-PAD and RIGHT-PAD pixel compensation on each side."
+    (concat
+     (when (and left-pad (> left-pad 0))
+       (propertize " " 'display `(space :width (,left-pad))))
+     char
+     (when (and right-pad (> right-pad 0))
+       (propertize " " 'display `(space :width (,right-pad))))))
+
+  (defun my/nano-modeline-symbol-override (orig-fn name)
+    (pcase name
+      ('buffer-read-write  (my/nano-icon ""  3  7))
+      ('buffer-modified    (my/nano-icon ""  3  7))
+      ('buffer-read-only   (my/nano-icon ""  3  7))
+      ('buffer-terminal    (my/nano-icon ""  3  7))
+      ('buffer-narrow      (my/nano-icon ""  3  7))
+      (_                   (funcall orig-fn name))))
+  
+  (advice-add 'nano-modeline-symbol :around #'my/nano-modeline-symbol-override)
+
+  ;;; CUSTOM DEFAULT FORMAT ;;;
+  
+  (setq nano-modeline-alignment '(margin . margin))
+  
+  (defun nano-modeline-element-file-icon ()
+    "Return a nerd icon for the current buffer's file type."
+    (when (fboundp 'nerd-icons-icon-for-buffer)
+      (let ((icon (nerd-icons-icon-for-buffer)))
+        (when (and icon (not (string-empty-p icon)))
+          (my/nano-icon icon 0 3)))))
+
+  (setq nano-modeline-format-default
+        (cons '(nano-modeline-element-buffer-status nano-modeline-element-space
+                nano-modeline-element-space
+                nano-modeline-element-file-icon
+                nano-modeline-element-space
+                nano-modeline-element-buffer-name
+                nano-modeline-element-space
+                nano-modeline-element-buffer-mode
+                nano-modeline-element-space
+                nano-modeline-element-buffer-vc-mode)
+              '(nano-modeline-element-buffer-position nano-modeline-element-window-status
+                nano-modeline-element-space)))
+  )
 
 #+end_src
 
