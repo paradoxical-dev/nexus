@@ -1640,7 +1640,8 @@ Then, we'll change some of the =org-modern= featues
   (add-hook 'org-mode-hook (lambda () (diff-hl-mode 0)))
   (setq
    org-modern-star 'replace                             ;; header style
-   org-modern-replace-stars "◉○◈◇✳"                     ;; header replacement
+   org-modern-replace-stars "󰻊󰵲◆◇"                     ;; header replacement
+   ;; org-modern-replace-stars "✿ ✸☀◉○"                     ;; header replacement
    org-modern-fold-stars nil                            ;; fold settings
    org-modern-list '((?- . "•") (?+ . "◦") (?* . "◆"))  ;; list replacements
    org-startup-with-inline-images t                     ;; default images
@@ -1677,10 +1678,12 @@ We also need to update the org and org-roam default locations
 
 #+end_src
 
-Another handy tool I use is [[github:alphapapa/org-ql][org-ql]]. We'll install this into [[file:packages.el][packages.el]]
+Another handy tool I use is [[github:alphapapa/org-ql][org-ql]]. We'll install this into [[file:packages.el][packages.el]], along with the =djvu= and =nov= packages needed for =org-noter=.
 
 #+begin_src emacs-lisp :tangle "packages.el"
 (package! org-ql)
+(package! djvu)
+(package! nov)
 
 #+end_src
 
@@ -1690,11 +1693,49 @@ Another handy tool I use is [[github:alphapapa/org-ql][org-ql]]. We'll install t
 
 #+end_src
 
-Lastly, we need to package the =djvu= and =nov= packages for =org-noter=
+Latex rendering in org mode can be pretty good for the most part. However, we can improve this using the [[github:io12/org-fragtog][org-fragtog]] package. With this package there's no need to manually re-render latex snippets. Additionally, it makes it easier to quickly move in and out of editing snippets.
 
 #+begin_src emacs-lisp :tangle "packages.el"
-(package! djvu)
-(package! nov)
+(package! org-fragtog)
+
+#+end_src
+
+#+begin_src emacs-lisp
+(use-package org-fragtog
+  :after org)
+
+(after! org
+  (add-hook 'org-mode-hook #'org-fragtog-mode))
+
+#+end_src
+
+Lastly, I like to add a custom function for defining a small floating window we can use to quickly capture a note from anywhere in the system. This functionally can easily bound to a keybind to run the command =emacsclient -n -e '(my/org-capture-floating)'=
+
+#+begin_src emacs-lisp
+;; (defun my/org-capture-floating ()
+;;   "Open org-capture in a small floating frame."
+;;   (interactive)
+;;   (let ((frame (make-frame '((name . "org-capture")
+;;                              (width . 80)
+;;                              (height . 20)
+;;                              (undecorated . t)))))
+;;     (select-frame frame)
+;;     (org-capture)
+;;     (add-hook 'org-capture-after-finalize-hook
+;;               (lambda ()
+;;                 (when (frame-live-p frame)
+;;                   (delete-frame frame)))
+;;               nil :local)))
+
+(defun my/org-agenda-floating ()
+  "Open org agenda in a floating frame."
+  (interactive)
+  (let ((frame (make-frame '((name . "org-agenda")
+                             (width . 100)
+                             (height . 40)
+                             (undecorated . t)))))
+    (select-frame frame)
+    (org-agenda nil "a")))
 
 #+end_src
 
@@ -1726,6 +1767,71 @@ Then configure it to a fixed width and hook it into org-mode. However, we don't 
   (setq olivetti-body-width 85))
 
 #+end_src
+
+Then we can configure some of the other UI elements of org documents. Starting with src blocks. We'll use the [[https:gitlab.com/vegasharmon/org-block-wrap][org-block-wrap]] package to remove the "notches" produced by wrapped lines in code blocks with =org-indent-mode= on.
+
+#+begin_src emacs-lisp :tangle "packages.el"
+(package! org-block-wrap
+  :recipe (:host gitlab
+           :repo "vegasharmon/org-block-wrap"))
+
+#+end_src
+
+#+begin_src emacs-lisp
+(after! org
+  (add-hook 'org-mode-hook #'org-block-wrap-mode))
+
+#+end_src
+
+Now, we can set some of the text replacements for org blocks using the =org-modern-block-name= variable
+
+#+begin_src emacs-lisp
+(after! org-modern
+  (setq org-modern-block-name
+        '(("src" . ("" ""))
+          ("quote" . ("" ""))
+          ("note" . ("" ""))
+          ("warning" . ("" ""))
+          ("example" . (" Example" "")))))
+
+#+end_src
+
+With this we can further customize the source blocks to include an icon for the declared language
+
+#+begin_src emacs-lisp
+(defun my/org-src-lang-icon (lang)
+  "Return a nerd-icons glyph for org src LANG, or nil."
+  (when (and lang (fboundp 'nerd-icons-icon-for-mode))
+    (let ((mode (or (cdr (assoc lang org-src-lang-modes))
+                    (intern (concat lang "-mode")))))
+      (ignore-errors (nerd-icons-icon-for-mode mode)))))
+
+(defun my/org-src-icon-matcher (limit)
+  "Font-lock matcher: prepend a language icon on #+begin_src lines."
+  (when (re-search-forward "^[ \t]*#\\+begin_src[ \t]+\\(\\S-+\\)" limit t)
+    (let* ((lang-beg (match-beginning 1))
+           (lang (match-string-no-properties 1))
+           (icon (my/org-src-lang-icon lang))
+           (space-beg (1- lang-beg)))
+      (when (and icon
+                 (>= space-beg (line-beginning-position))
+                 (eq (char-after space-beg) ?\s))
+        ;; replace the existing space's display instead of stacking a new one
+        (put-text-property space-beg lang-beg 'display (concat icon " "))))
+    t))
+
+(after! org
+  (font-lock-add-keywords 'org-mode '((my/org-src-icon-matcher)) 'append))
+
+#+end_src
+
+We can also add some custom "callouts" for specific blocks (i.e note, warning, etc.). To do this we use some custom snippets.
+
+#+begin_quote
+  󰟶  All custom snippets are stored within this repository in a sub directory
+     of their respective mode. For example, [[file:snippets/org-mode/note][this one]]
+#+end_quote
+
 
 *** Captures
 
