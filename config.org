@@ -2375,14 +2375,14 @@ Then configuring it to activate on hypr files, and adding it to our tree-sitter 
 #+end_src
 
 #+BEGIN_QUOTE
-   You may need to manually install the grammar before using it
-    =M-x treesit-install-language-grammar= -> =hyprlang=
+    You may need to manually install the grammar before using it
+     =M-x treesit-install-language-grammar= -> =hyprlang=
 #+END_QUOTE
 
 To use the community LSP for hyprland config files, hyprls, we have to add it to our LSP config
 
 #+BEGIN_QUOTE
-   If you do not have the [[github:hyprland-community/hyprls][hyprls]] package, youll need to install it
+    If you do not have the [[github:hyprland-community/hyprls][hyprls]] package, youll need to install it
 #+END_QUOTE
 
 #+begin_src emacs-lisp
@@ -2411,7 +2411,7 @@ Since Doom doesn't bundle an SQL LSP by default, we'll need to configure the bui
 #+end_src
 
 #+BEGIN_QUOTE
-   If you do not have the [[github:sqls-server/sqls][sqls]] package, you'll need to install it
+    If you do not have the [[github:sqls-server/sqls][sqls]] package, you'll need to install it
 #+END_QUOTE
 
 For a proper database client, *Nexus* employs the [[github:kostafey/ejc-sql][ejc-sql]] package. Although =sqls= is /capable/ of executing queries, it fails in comparison to =ejc=.
@@ -2468,8 +2468,8 @@ First step is to adjust the default popup size for the interactive R console
 Since I use [[https:nixos.org/][NixOS]], we'll need to setup a nix language server. DOOM's init file option for nix only supports the [[github:oxalica/nil][nil]] language server, so instead we need to manually setup [[github:nix-community/nixd/tree/main][nixd]]
 
 #+begin_quote
-  󰌶 If you install this repo without using Nix, you can choose to disable
-    this module or remove it entirely, along with the Custom -> NixOS module.
+  󰌶  If you install this repo without using Nix, you can choose to disable
+     this module or remove it entirely, along with the Custom -> NixOS module.
 #+end_quote
 
 
@@ -2502,7 +2502,7 @@ Doom includes an optional module for installing the =dash-docs= package which we
 The first step is to include a list of docsets which are always installed.
 
 #+BEGIN_QUOTE
-   You may wish to edit this list to fit your needs
+    You may wish to edit this list to fit your needs
 #+END_QUOTE
 
 #+begin_src emacs-lisp
